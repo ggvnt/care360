@@ -6,6 +6,7 @@ import cors from "cors";
 
 //auth
 import authRoutes from "./routes/auth/auth.route.js";
+import userAppointmentRoutes from "./routes/user.appointment.route.js";
 
 dotenv.config();
 const app = express();
@@ -23,6 +24,7 @@ app.use(
 app.use(express.urlencoded({ extended: true })); // Parses URL-encoded data
 
 app.use("/api/auth", authRoutes);
+app.use("/api/my/appointments", userAppointmentRoutes);
 
 app.listen(PORT, () => {
   console.log("Server is running on PORT:" + PORT);
