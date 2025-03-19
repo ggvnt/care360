@@ -16,6 +16,10 @@ import LoginPage from "./pages/auth/LoginPage.jsx";
 import SignUpPage from "./pages/auth/SignUpPage.jsx";
 import { useAuthStore } from "./store/auth/useAuthStore";
 
+//Admin
+import AdminPage from "./pages/admins/AdminPage.jsx";
+import SymptomsPage from "./pages/admins/SymptomsPage.jsx";
+
 //vishmitha
 import SymptomCheckerPage from "./pages/vishmitha/SymptomCheckerPage.jsx";
 
@@ -54,6 +58,24 @@ const App = () => {
 
           {/*vishmitha*/}
           <Route path="/symptomChecker" element={<SymptomCheckerPage />} />
+
+          {/* Admin-only route */}
+          <Route
+            path="/admin/dashboard"
+            element={
+              authUser?.role === "admin" ? <AdminPage /> : <Navigate to="/" />
+            }
+          />
+          <Route
+            path="/admin/symptoms"
+            element={
+              authUser?.role === "admin" ? (
+                <SymptomsPage />
+              ) : (
+                <Navigate to="/" />
+              )
+            }
+          />
         </Routes>
         <Toaster />
       </Router>
