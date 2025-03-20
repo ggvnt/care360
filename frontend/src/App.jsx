@@ -18,6 +18,8 @@ import { useAuthStore } from "./store/auth/useAuthStore";
 
 //vishmitha
 import SymptomCheckerPage from "./pages/vishmitha/SymptomCheckerPage.jsx";
+import Appointments from "./pages/appointments/Appointments.jsx";
+import MyBookings from "./pages/appointments/MyBookings.jsx";
 
 const App = () => {
   const { authUser, checkAuth, isCheckingAuth } = useAuthStore();
@@ -51,9 +53,18 @@ const App = () => {
             path="/login"
             element={!authUser ? <LoginPage /> : <Navigate to="/" />}
           />
+          <Route
+            path="/appoinments"
+            element={!authUser ? <LoginPage /> : <Appointments />}
+          />
+          <Route
+            path="/my-bookings"
+            element={!authUser ? <LoginPage /> : <MyBookings />}
+          />
 
           {/*vishmitha*/}
           <Route path="/symptomChecker" element={<SymptomCheckerPage />} />
+
         </Routes>
         <Toaster />
       </Router>

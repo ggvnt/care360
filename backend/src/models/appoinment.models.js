@@ -6,17 +6,33 @@ const appoinmentSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    doctorId : {
+    preferredDoctor : {
         type: String,
         required: true,
     },
-    appointmentDate: {
+    appointmentDateTime: {
         type: String,
         required: true,
     },
-    appointmentTime: {
-        type: String,
-        required: true,
+    fullName: {
+      type: String,
+      required: true
+    },
+    email: {
+      type: String,
+      required: true
+    },
+    gender: {
+      type: String,
+      required: true
+    },
+    contactNumber: {
+      type: String,
+      required: true
+    },
+    dateOfBirth: {
+      type: String,
+      required: true
     }
   },
 );

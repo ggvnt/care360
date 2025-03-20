@@ -10,9 +10,12 @@ import { protectRoute } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
-router.get("/", protectRoute, getAppointment);
+
 router.get("/get-doctors", getDoctors);
-router.post("/create", createAppointment);
+
+router.get("/", protectRoute, getAppointment);
+router.post("/create", protectRoute, createAppointment);
+
 router.put("/update", updateAppointment);
 router.delete("/delete", deleteAppointment);
 

@@ -2,16 +2,18 @@ import Doctor from '../models/doctor.models.js';
 import Appointment  from '../models/appoinment.models.js';
 
 export const getAppointment = async (req, res) => {
-     const userId = req.user._id; 
+     const userId = req.user._id;
+     console.log(userId);
+      
 
     try {
-      const appointment = await Appointment.findOne({ userId });
+      const appointments = await Appointment.find({ userId });
 
-      if (!appointment) {
+      if (!appointments) {
         return res.status(200).json({ success: true, message: "No appointments found." });
       }
   
-        res.status(200).json({ success: true, data: userId });
+        res.status(200).json({ success: true, data: appointments });
     } catch (error) {
       console.error("Error in user appointment controller:", error.message);
       res.status(500).json({ message: "Internal server error" });
