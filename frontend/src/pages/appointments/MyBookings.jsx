@@ -14,6 +14,7 @@ export default function MyBookings() {
         preferredDoctor: "",
         appointmentDateTime: ""
     });
+    const [errors, setErrors] = useState({});
 
     const getAppoiments = async () => {
         try {
@@ -44,16 +45,90 @@ export default function MyBookings() {
             preferredDoctor: appointment.preferredDoctor,
             appointmentDateTime: appointment.appointmentDateTime
         });
+        setErrors({});
     };
 
     const handleInputChange = (e) => {
+        const { name, value } = e.target;
         setFormData({
             ...formData,
-            [e.target.name]: e.target.value
+            [name]: value
         });
+        
+        // Clear error when field is edited
+        if (errors[name]) {
+            setErrors({
+                ...errors,
+                [name]: ""
+            });
+        }
+    };
+
+    const validateForm = () => {
+        const newErrors = {};
+        
+        // Full Name validation
+        if (!formData.fullName.trim()) {
+            newErrors.fullName = "Full name is required";
+        } else if (formData.fullName.trim().length < 3) {
+            newErrors.fullName = "Full name must be at least 3 characters";
+        }
+        
+        // Date of Birth validation
+        if (!formData.dateOfBirth) {
+            newErrors.dateOfBirth = "Date of birth is required";
+        } else {
+            const birthDate = new Date(formData.dateOfBirth);
+            const today = new Date();
+            if (birthDate > today) {
+                newErrors.dateOfBirth = "Date of birth cannot be in the future";
+            }
+        }
+        
+        // Gender validation
+        if (!formData.gender) {
+            newErrors.gender = "Gender selection is required";
+        }
+        
+        // Contact Number validation
+        if (!formData.contactNumber) {
+            newErrors.contactNumber = "Contact number is required";
+        } else if (!/^\d{10,15}$/.test(formData.contactNumber.replace(/[-()\s]/g, ''))) {
+            newErrors.contactNumber = "Please enter a valid contact number";
+        }
+        
+        // Email validation
+        if (!formData.email) {
+            newErrors.email = "Email is required";
+        } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+            newErrors.email = "Please enter a valid email address";
+        }
+        
+        // Preferred Doctor validation
+        if (!formData.preferredDoctor) {
+            newErrors.preferredDoctor = "Preferred doctor is required";
+        }
+        
+        // Appointment Date & Time validation
+        if (!formData.appointmentDateTime) {
+            newErrors.appointmentDateTime = "Appointment date and time is required";
+        } else {
+            const appointmentDate = new Date(formData.appointmentDateTime);
+            const today = new Date();
+            if (appointmentDate < today) {
+                newErrors.appointmentDateTime = "Appointment time cannot be in the past";
+            }
+        }
+        
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
     };
 
     const updateAppointment = async (id) => {
+        if (!validateForm()) {
+            return;
+        }
+        
         try {
             const response = await axiosInstance.put(`my/appointments/${id}`, formData);
 
@@ -73,8 +148,12 @@ export default function MyBookings() {
                 preferredDoctor: "",
                 appointmentDateTime: ""
             });
+            setErrors({});
         } catch (error) {
             console.error("Error updating appointment:", error);
+            if (error.response && error.response.data && error.response.data.errors) {
+                setErrors(error.response.data.errors);
+            }
         }
     };
 
@@ -89,6 +168,7 @@ export default function MyBookings() {
             preferredDoctor: "",
             appointmentDateTime: ""
         });
+        setErrors({});
     };
 
     useEffect(() => {
@@ -122,8 +202,11 @@ export default function MyBookings() {
                                                 name="fullName"
                                                 value={formData.fullName}
                                                 onChange={handleInputChange}
-                                                className="w-full p-1 border rounded"
+                                                className={`w-full p-1 border rounded ${errors.fullName ? 'border-red-500' : ''}`}
                                             />
+                                            {errors.fullName && (
+                                                <p className="text-red-500 text-xs mt-1">{errors.fullName}</p>
+                                            )}
                                         </td>
                                         <td className="py-2 px-4 border-b border-gray-200">
                                             <input
@@ -131,21 +214,27 @@ export default function MyBookings() {
                                                 name="dateOfBirth"
                                                 value={formData.dateOfBirth}
                                                 onChange={handleInputChange}
-                                                className="w-full p-1 border rounded"
+                                                className={`w-full p-1 border rounded ${errors.dateOfBirth ? 'border-red-500' : ''}`}
                                             />
+                                            {errors.dateOfBirth && (
+                                                <p className="text-red-500 text-xs mt-1">{errors.dateOfBirth}</p>
+                                            )}
                                         </td>
                                         <td className="py-2 px-4 border-b border-gray-200">
                                             <select
                                                 name="gender"
                                                 value={formData.gender}
                                                 onChange={handleInputChange}
-                                                className="w-full p-1 border rounded"
+                                                className={`w-full p-1 border rounded ${errors.gender ? 'border-red-500' : ''}`}
                                             >
                                                 <option value="">Select</option>
                                                 <option value="Male">Male</option>
                                                 <option value="Female">Female</option>
                                                 <option value="Other">Other</option>
                                             </select>
+                                            {errors.gender && (
+                                                <p className="text-red-500 text-xs mt-1">{errors.gender}</p>
+                                            )}
                                         </td>
                                         <td className="py-2 px-4 border-b border-gray-200">
                                             <input
@@ -153,8 +242,11 @@ export default function MyBookings() {
                                                 name="contactNumber"
                                                 value={formData.contactNumber}
                                                 onChange={handleInputChange}
-                                                className="w-full p-1 border rounded"
+                                                className={`w-full p-1 border rounded ${errors.contactNumber ? 'border-red-500' : ''}`}
                                             />
+                                            {errors.contactNumber && (
+                                                <p className="text-red-500 text-xs mt-1">{errors.contactNumber}</p>
+                                            )}
                                         </td>
                                         <td className="py-2 px-4 border-b border-gray-200">
                                             <input
@@ -162,8 +254,11 @@ export default function MyBookings() {
                                                 name="email"
                                                 value={formData.email}
                                                 onChange={handleInputChange}
-                                                className="w-full p-1 border rounded"
+                                                className={`w-full p-1 border rounded ${errors.email ? 'border-red-500' : ''}`}
                                             />
+                                            {errors.email && (
+                                                <p className="text-red-500 text-xs mt-1">{errors.email}</p>
+                                            )}
                                         </td>
                                         <td className="py-2 px-4 border-b border-gray-200">
                                             <input
@@ -171,8 +266,11 @@ export default function MyBookings() {
                                                 name="preferredDoctor"
                                                 value={formData.preferredDoctor}
                                                 onChange={handleInputChange}
-                                                className="w-full p-1 border rounded"
+                                                className={`w-full p-1 border rounded ${errors.preferredDoctor ? 'border-red-500' : ''}`}
                                             />
+                                            {errors.preferredDoctor && (
+                                                <p className="text-red-500 text-xs mt-1">{errors.preferredDoctor}</p>
+                                            )}
                                         </td>
                                         <td className="py-2 px-4 border-b border-gray-200">
                                             <input
@@ -180,8 +278,11 @@ export default function MyBookings() {
                                                 name="appointmentDateTime"
                                                 value={formData.appointmentDateTime}
                                                 onChange={handleInputChange}
-                                                className="w-full p-1 border rounded"
+                                                className={`w-full p-1 border rounded ${errors.appointmentDateTime ? 'border-red-500' : ''}`}
                                             />
+                                            {errors.appointmentDateTime && (
+                                                <p className="text-red-500 text-xs mt-1">{errors.appointmentDateTime}</p>
+                                            )}
                                         </td>
                                         <td className="py-2 px-4 border-b border-gray-200">
                                             <button
