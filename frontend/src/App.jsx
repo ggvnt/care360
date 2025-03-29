@@ -1,25 +1,85 @@
-import React from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import Navbar from "./components/Navbar";
-import DoctorDashboard from "./pages/DoctorDashboard";
-import AddDoctor from "./pages/AddDoctor";
-import DoctorList from "./pages/DoctorList";
-import DoctorDetails from "./pages/DoctorDetails";
-import EditDoctor from "./pages/EditDoctor";
+import React, { useEffect } from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
+
+// Common
+import HomePage from "./components/HomePage.jsx";
+import Navbar from "./components/Navbar.jsx";
+import { Toaster } from "react-hot-toast";
+import { ClipLoader } from "react-spinners";
+// Auth
+import LoginPage from "./pages/auth/LoginPage.jsx";
+import SignUpPage from "./pages/auth/SignUpPage.jsx";
+import { useAuthStore } from "./store/auth/useAuthStore";
+
+//Admin
+import AdminPage from "./pages/admins/AdminPage.jsx";
+import SymptomsPage from "./pages/admins/SymptomsPage.jsx";
+
+//vishmitha
+import SymptomCheckerPage from "./pages/vishmitha/SymptomCheckerPage.jsx";
 
 const App = () => {
+  const { authUser, checkAuth, isCheckingAuth } = useAuthStore();
+
+  useEffect(() => {
+    checkAuth(); // Check the user's auth status on page load
+  }, [checkAuth]);
+
+  if (isCheckingAuth && !authUser)
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <ClipLoader size={50} color="#36d7b7" />
+      </div>
+    );
+
   return (
-    <Router>
-      <Navbar />
-      <Routes>
-        <Route path="/" element={<Navigate to="/dashboard" />} /> {/* Redirect to dashboard */}
-        <Route path="/dashboard" element={<DoctorDashboard />} />
-        <Route path="/add-doctor" element={<AddDoctor />} />
-        <Route path="/doctors" element={<DoctorList />} />
-        <Route path="/edit-doctor/:id" element={<EditDoctor/>} />
-        <Route path="/doctors/:id" element={<DoctorDetails />} />
-      </Routes>
-    </Router>
+    <div>
+      <Router>
+        <Navbar />
+        <Routes>
+          {/* Public routes */}
+          <Route
+            path="/"
+            element={authUser ? <HomePage /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/signup"
+            element={!authUser ? <SignUpPage /> : <Navigate to="/" />}
+          />
+          <Route
+            path="/login"
+            element={!authUser ? <LoginPage /> : <Navigate to="/" />}
+          />
+
+          {/*vishmitha*/}
+          <Route path="/symptomChecker" element={<SymptomCheckerPage />} />
+
+          {/* Admin-only route */}
+          <Route
+            path="/admin/dashboard"
+            element={
+              authUser?.role === "admin" ? <AdminPage /> : <Navigate to="/" />
+            }
+          />
+          <Route
+            path="/admin/symptoms"
+            element={
+              authUser?.role === "admin" ? (
+                <SymptomsPage />
+              ) : (
+                <Navigate to="/" />
+              )
+            }
+          />
+        </Routes>
+        <Toaster />
+      </Router>
+    </div>
   );
 };
 
