@@ -41,3 +41,39 @@ export const checkSymptoms = async (req, res) => {
     return res.status(500).json({ message: "Server error" });
   }
 };
+
+export const checkSymptomsAI = async (req, res) => {
+  try {
+    const { symptoms } = req.body;
+
+    if (!symptoms || symptoms.length === 0) {
+      return res.status(400).json({ message: "Please provide symptoms" });
+    }
+
+    const response = await axios.post(
+      "https://api.infermedica.com/v3/diagnosis",
+      {
+        sex: "male", // This can be dynamically set by the user
+        age: 25, // This can be dynamically set by the user
+        evidence: symptoms.map((symptom) => ({
+          id: symptom, // The symptom IDs from your database
+          choice_id: "present",
+        })),
+      },
+      {
+        headers: {
+          "App-Id": "YOUR_APP_ID", // Your Infermedica API key
+          "App-Key": "YOUR_APP_KEY", // Your Infermedica API key
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    res.json(response.data);
+  } catch (error) {
+    console.error("Error in AI diagnosis:", error);
+    res
+      .status(500)
+      .json({ message: "Error fetching AI-based diagnosis", error });
+  }
+};
