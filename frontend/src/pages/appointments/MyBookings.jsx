@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { axiosInstance } from "../../lib/axios";
-import { FaEdit, FaTrash } from "react-icons/fa";
+import { FaEdit, FaTrash, FaSearch } from "react-icons/fa";
 
 export default function MyBookings() {
     const [dataList, setDataList] = useState([]);
+    const [filteredDataList, setFilteredDataList] = useState([]);
+    const [searchTerm, setSearchTerm] = useState("");
     const [editingAppointment, setEditingAppointment] = useState(null);
     const [formData, setFormData] = useState({
         fullName: "",
@@ -20,15 +22,43 @@ export default function MyBookings() {
         try {
             const response = await axiosInstance.get("my/appointments");
             setDataList(response.data.data);
+            setFilteredDataList(response.data.data);
         } catch (error) {
-            console.error("There was an error booking the appointment:", error);
+            console.error("There was an error fetching appointments:", error);
         }
+    };
+
+    // Filter function for search
+    const handleSearch = (e) => {
+        const term = e.target.value.toLowerCase();
+        setSearchTerm(term);
+        
+        if (!term.trim()) {
+            setFilteredDataList(dataList);
+            return;
+        }
+        
+        const filtered = dataList.filter(item => 
+            item.fullName.toLowerCase().includes(term) || 
+            item.preferredDoctor.toLowerCase().includes(term)
+        );
+        
+        setFilteredDataList(filtered);
     };
 
     const deleteAppointment = async (id) => {
         try {
             await axiosInstance.delete(`my/appointments/${id}`);
-            setDataList(dataList.filter(item => item._id !== id));
+            const updatedList = dataList.filter(item => item._id !== id);
+            setDataList(updatedList);
+            setFilteredDataList(
+                searchTerm.trim() ? 
+                updatedList.filter(item => 
+                    item.fullName.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                    item.preferredDoctor.toLowerCase().includes(searchTerm.toLowerCase())
+                ) : 
+                updatedList
+            );
         } catch (error) {
             console.error("Error deleting appointment:", error);
         }
@@ -131,11 +161,24 @@ export default function MyBookings() {
         
         try {
             const response = await axiosInstance.put(`my/appointments/${id}`, formData);
+            const updatedAppointment = response.data.data;
 
             // Update the dataList with the updated appointment
-            setDataList(dataList.map(item =>
-                item._id === id ? response.data.data : item
-            ));
+            const updatedDataList = dataList.map(item =>
+                item._id === id ? updatedAppointment : item
+            );
+            
+            setDataList(updatedDataList);
+            
+            // Also update the filtered list
+            setFilteredDataList(
+                searchTerm.trim() ? 
+                updatedDataList.filter(item => 
+                    item.fullName.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                    item.preferredDoctor.toLowerCase().includes(searchTerm.toLowerCase())
+                ) : 
+                updatedDataList
+            );
 
             // Reset editing state
             setEditingAppointment(null);
@@ -177,7 +220,36 @@ export default function MyBookings() {
 
     return (
         <div className="container mx-auto px-4 py-8">
-            <h1 className="text-2xl font-bold mb-6">Appointments List</h1>
+            <div className="flex justify-between items-center mb-6">
+                <h1 className="text-2xl font-bold">Appointments List</h1>
+                
+                {/* Compact Search Bar */}
+                <div className="w-64 relative">
+                    <div className="flex items-center border rounded-md overflow-hidden bg-white shadow-sm">
+                        <div className="pl-3 pr-1 text-gray-400">
+                            <FaSearch size={14} />
+                        </div>
+                        <input
+                            type="text"
+                            placeholder="Search name/doctor..."
+                            value={searchTerm}
+                            onChange={handleSearch}
+                            className="w-full py-2 px-2 text-sm focus:outline-none"
+                        />
+                        {searchTerm && (
+                            <button 
+                                onClick={() => {
+                                    setSearchTerm("");
+                                    setFilteredDataList(dataList);
+                                }}
+                                className="pr-3 text-gray-400 hover:text-gray-600"
+                            >
+                                ✕
+                            </button>
+                        )}
+                    </div>
+                </div>
+            </div>
 
             <div className="overflow-x-auto">
                 <table className="min-w-full bg-white border border-gray-200">
@@ -192,7 +264,7 @@ export default function MyBookings() {
                         </tr>
                     </thead>
                     <tbody>
-                        {dataList.length > 0 ? dataList.map((item, index) => (
+                        {filteredDataList && filteredDataList.length > 0 ? filteredDataList.map((item, index) => (
                             <tr key={index} className={index % 2 === 0 ? "bg-gray-50" : "bg-white"}>
                                 {editingAppointment === item._id ? (
                                     <>
@@ -332,7 +404,7 @@ export default function MyBookings() {
                         )) : (
                             <tr>
                                 <td colSpan="8" className="py-4 px-4 text-center border-b border-gray-200">
-                                    No appointments available
+                                    {searchTerm ? "No matching appointments found" : "No appointments available"}
                                 </td>
                             </tr>
                         )}
