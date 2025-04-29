@@ -88,3 +88,37 @@ export const logout = (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
+
+export const updateProfile = async (req, res) => {
+  try {
+    const { firstName, lastName, location, phone, bio } = req.body;
+    const userId = req.user._id;
+
+    let updatedFields = {
+      firstName,
+      lastName,
+      location,
+      phone,
+      bio
+    };
+
+    // Handle file upload if present
+    if (req.file) {
+      const uploadResponse = await cloudinary.uploader.upload(req.file.path, {
+        max_file_size: 5 * 1024 * 1024,
+        resource_type: "image",
+      });
+      updatedFields.profilePic = uploadResponse.secure_url;
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(userId, updatedFields, {
+      new: true,
+    }).select('-password'); // Exclude password from response
+
+    return res.status(200).json(updatedUser);
+  } catch (error) {
+    console.log("Error in update profile:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
