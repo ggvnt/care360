@@ -22,6 +22,7 @@ import SymptomsPage from "./pages/admins/SymptomsPage.jsx";
 
 //vishmitha
 import SymptomCheckerPage from "./pages/vishmitha/SymptomCheckerPage.jsx";
+import ProfilePage from "./pages/auth/ProfilePage.jsx";
 
 const App = () => {
   const { authUser, checkAuth, isCheckingAuth } = useAuthStore();
@@ -54,6 +55,10 @@ const App = () => {
           <Route
             path="/login"
             element={!authUser ? <LoginPage /> : <Navigate to="/" />}
+          />
+          <Route
+            path="/profile"
+            element={authUser ? <ProfilePage /> : <Navigate to="/login" />}
           />
 
           {/*vishmitha*/}
