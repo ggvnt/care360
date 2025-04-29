@@ -23,6 +23,15 @@ import SymptomsPage from "./pages/admins/SymptomsPage.jsx";
 //vishmitha
 import SymptomCheckerPage from "./pages/vishmitha/SymptomCheckerPage.jsx";
 
+//durangi
+import AddDoctor from "./pages/AddDoctor.jsx";
+import DoctorDashboard from "./pages/DoctorDashboard.jsx";
+import DoctorDetails from "./pages/DoctorDetails.jsx"
+import DoctorList from "./pages/DoctorList.jsx"
+import EditDoctor from "./pages/EditDoctor.jsx"
+
+//
+
 const App = () => {
   const { authUser, checkAuth, isCheckingAuth } = useAuthStore();
 
@@ -58,6 +67,13 @@ const App = () => {
 
           {/*vishmitha*/}
           <Route path="/symptomChecker" element={<SymptomCheckerPage />} />
+
+          {/*durangi*/}
+          <Route path="/AddDoctor" element={<AddDoctor />} />
+          <Route path="/DoctorDashboard" element={<DoctorDashboard />} />
+          <Route path="/DoctorDetails" element={<DoctorDetails />} />
+          <Route path="/DoctorList" element={<DoctorList />} />
+          <Route path="/EditDoctor" element={<EditDoctor />} />
 
           {/* Admin-only route */}
           <Route
