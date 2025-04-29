@@ -40,7 +40,7 @@ const userSchema = new mongoose.Schema(
       default: "",
     },
     age: {
-      type: Number,
+      type: Number, 
       default: "",
     },
     role: {
