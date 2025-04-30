@@ -131,6 +131,12 @@ const DoctorList = () => {
                     {doctor.availability}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <Link
+                      to={`/DoctorDetails/${doctor._id}`}
+                      className="text-blue-600 hover:text-indigo-900 mr-4"
+                    >
+                      View
+                    </Link>
                     <Link
                       to={`/edit-doctor/${doctor._id}`}
                       className="text-indigo-600 hover:text-indigo-900 mr-4"

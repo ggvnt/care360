@@ -76,7 +76,7 @@ const App = () => {
           {/*durangi*/}
           <Route path="/AddDoctor" element={<AddDoctor />} />
           <Route path="/DoctorDashboard" element={<DoctorDashboard />} />
-          <Route path="/DoctorDetails" element={<DoctorDetails />} />
+          <Route path="/DoctorDetails/:id" element={<DoctorDetails />} />
           <Route path="/DoctorList" element={<DoctorList />} />
           <Route path="/EditDoctor" element={<EditDoctor />} />
 
