@@ -11,10 +11,21 @@ export const checkAuth = async (req, res) => {
 };
 
 export const signup = async (req, res) => {
-  const { email, password, confirmPassword, firstName, lastName, role } =
-    req.body;
+  const { 
+    email, 
+    password, 
+    confirmPassword, 
+    firstName, 
+    lastName, 
+    role,
+    sex,
+    location,
+    phone,
+    age
+  } = req.body;
 
   try {
+    // Check required fields
     if (!email || !password || !confirmPassword || !firstName || !lastName) {
       return res.status(400).json({ message: "All fields are required" });
     }
@@ -34,7 +45,12 @@ export const signup = async (req, res) => {
       lastName,
       password,
       role: role || "user",
+      sex: sex || "", // Add sex with default empty string
+      location: location || "", // Add location with default empty string
+      phone: phone || "", // Add phone with default empty string
+      age: age || "" 
     });
+
     await newUser.save();
 
     generateToken(newUser._id, res);
@@ -46,6 +62,10 @@ export const signup = async (req, res) => {
       email: newUser.email,
       profilePic: newUser.profilePic,
       role: newUser.role,
+      sex: newUser.sex, // Include sex in response
+      location: newUser.location, // Include location in response
+      phone: newUser.phone, // Include phone in response
+      age: newUser.age
     });
   } catch (error) {
     console.error("Error in signup controller:", error.message);
