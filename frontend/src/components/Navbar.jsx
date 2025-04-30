@@ -42,7 +42,7 @@ const Navbar = () => {
         </li>
         <li
           className="hover:text-gray-200 cursor-pointer"
-          onClick={() => navigate("#")}
+          onClick={() => navigate('/DoctorList')}
         >
           Doctors
         </li>

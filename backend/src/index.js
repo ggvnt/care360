@@ -23,11 +23,14 @@ app.use(express.urlencoded({ extended: true })); // Parses URL-encoded data
 // Routes
 import authRoutes from "./routes/auth/auth.route.js";
 import symptomRoutes from "./routes/admins/symptom.route.js";
-import doctorRoutes from "./routes/doctorRoutes.js";
+import doctorRoutes from "./routes/doctor/doctorRoutes.js";
+
+
 
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", symptomRoutes);
 app.use("/api/doctors", doctorRoutes);
+
 
 // Start Server
 app.listen(PORT, () => {

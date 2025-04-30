@@ -3,13 +3,32 @@ import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import { useNavigate } from "react-router-dom";
-import axios from "axios"; // Import axios
+import axios from "axios";
 
 // Define validation schema using yup
 const doctorSchema = yup.object().shape({
-  name: yup.string().required("Name is required"),
+  fullName: yup.string().required("Full name is required"),
   email: yup.string().email("Invalid email").required("Email is required"),
   specialization: yup.string().required("Specialization is required"),
+  qualifications: yup
+    .array()
+    .of(yup.string().required("Qualification is required"))
+    .min(1, "At least one qualification is required")
+    .required("Qualifications are required"),
+  experience: yup
+    .number()
+    .typeError("Experience must be a number")
+    .min(0, "Experience cannot be negative")
+    .required("Experience is required"),
+  consultationFee: yup
+    .number()
+    .typeError("Consultation fee must be a number")
+    .min(0, "Consultation fee cannot be negative")
+    .required("Consultation fee is required"),
+  contactInfo: yup.object().shape({
+    phone: yup.string().required("Phone number is required"),
+    address: yup.string().required("Address is required"),
+  }),
   availability: yup.string().required("Availability is required"),
 });
 
@@ -39,7 +58,12 @@ const AddDoctor = () => {
 
   // Combine selected days and time into the availability field
   useEffect(() => {
-    if (selectedDays && selectedTime && selectedDays !== "Custom" && selectedTime !== "Custom") {
+    if (
+      selectedDays &&
+      selectedTime &&
+      selectedDays !== "Custom" &&
+      selectedTime !== "Custom"
+    ) {
       setValue("availability", `${selectedDays}, ${selectedTime}`);
     } else if (selectedDays === "Custom" || selectedTime === "Custom") {
       setValue("availability", watch("customAvailability"));
@@ -48,17 +72,35 @@ const AddDoctor = () => {
     }
   }, [selectedDays, selectedTime, setValue, watch]);
 
+  // Handle dynamic qualifications array
+  const qualifications = watch("qualifications", [""]);
+
+  const addQualification = () => {
+    setValue("qualifications", [...qualifications, ""]);
+  };
+
+  const removeQualification = (index) => {
+    const updatedQualifications = qualifications.filter((_, i) => i !== index);
+    setValue("qualifications", updatedQualifications);
+  };
+
+  const updateQualification = (index, value) => {
+    const updatedQualifications = [...qualifications];
+    updatedQualifications[index] = value;
+    setValue("qualifications", updatedQualifications);
+  };
+
   const onSubmit = async (data) => {
     try {
       // Send POST request to the backend API
       const response = await axios.post("http://localhost:5001/api/doctors", data);
       console.log("Doctor added successfully:", response.data);
-  
+
       // Redirect to the doctors list page after successful submission
       navigate("/doctors");
     } catch (error) {
       console.error("Error adding doctor:", error);
-  
+
       // Display error message to the user
       if (error.response) {
         alert(`Error: ${error.response.data.message}`);
@@ -74,20 +116,20 @@ const AddDoctor = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-      <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
+      <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-2xl">
         <h1 className="text-2xl font-bold mb-6 text-center">Add Doctor</h1>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Name:</label>
+            <label className="block text-sm font-medium text-gray-700">Full Name:</label>
             <input
               type="text"
-              {...register("name")}
+              {...register("fullName")}
               className={`mt-1 block w-full px-3 py-2 border ${
-                errors.name ? "border-red-500" : "border-gray-300"
+                errors.fullName ? "border-red-500" : "border-gray-300"
               } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
             />
-            {errors.name && (
-              <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>
+            {errors.fullName && (
+              <p className="text-red-500 text-sm mt-1">{errors.fullName.message}</p>
             )}
           </div>
           <div>
@@ -124,6 +166,93 @@ const AddDoctor = () => {
             </select>
             {errors.specialization && (
               <p className="text-red-500 text-sm mt-1">{errors.specialization.message}</p>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Qualifications:</label>
+            {qualifications.map((qual, index) => (
+              <div key={index} className="flex gap-2 mb-2">
+                <input
+                  type="text"
+                  value={qual}
+                  onChange={(e) => updateQualification(index, e.target.value)}
+                  className={`mt-1 block w-full px-3 py-2 border ${
+                    errors.qualifications?.[index] ? "border-red-500" : "border-gray-300"
+                  } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
+                  placeholder={`Qualification ${index + 1}`}
+                />
+                {qualifications.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeQualification(index)}
+                    className="mt-1 px-3 py-2 bg-red-500 text-white rounded-md"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={addQualification}
+              className="mt-2 px-3 py-2 bg-indigo-600 text-white rounded-md"
+            >
+              Add Qualification
+            </button>
+            {errors.qualifications && (
+              <p className="text-red-500 text-sm mt-1">{errors.qualifications.message}</p>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Experience (Years):</label>
+            <input
+              type="number"
+              {...register("experience")}
+              className={`mt-1 block w-full px-3 py-2 border ${
+                errors.experience ? "border-red-500" : "border-gray-300"
+              } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
+            />
+            {errors.experience && (
+              <p className="text-red-500 text-sm mt-1">{errors.experience.message}</p>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Consultation Fee ($):</label>
+            <input
+              type="number"
+              {...register("consultationFee")}
+              className={`mt-1 block w-full px-3 py-2 border ${
+                errors.consultationFee ? "border-red-500" : "border-gray-300"
+              } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
+            />
+            {errors.consultationFee && (
+              <p className="text-red-500 text-sm mt-1">{errors.consultationFee.message}</p>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Phone Number:</label>
+            <input
+              type="text"
+              {...register("contactInfo.phone")}
+              className={`mt-1 block w-full px-3 py-2 border ${
+                errors.contactInfo?.phone ? "border-red-500" : "border-gray-300"
+              } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
+            />
+            {errors.contactInfo?.phone && (
+              <p className="text-red-500 text-sm mt-1">{errors.contactInfo.phone.message}</p>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Address:</label>
+            <input
+              type="text"
+              {...register("contactInfo.address")}
+              className={`mt-1 block w-full px-3 py-2 border ${
+                errors.contactInfo?.address ? "border-red-500" : "border-gray-300"
+              } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
+            />
+            {errors.contactInfo?.address && (
+              <p className="text-red-500 text-sm mt-1">{errors.contactInfo.address.message}</p>
             )}
           </div>
           <div>

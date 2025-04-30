@@ -77,11 +77,11 @@ const App = () => {
           <Route path="/symptomChecker" element={<SymptomCheckerPage />} />
 
           {/*durangi*/}
-          <Route path="/AddDoctor" element={<AddDoctor />} />
+          <Route path="/add-doctor" element={<AddDoctor />} />
           <Route path="/DoctorDashboard" element={<DoctorDashboard />} />
-          <Route path="/DoctorDetails" element={<DoctorDetails />} />
-          <Route path="/DoctorList" element={<DoctorList />} />
-          <Route path="/EditDoctor" element={<EditDoctor />} />
+          <Route path="/DoctorDetails/:id" element={<DoctorDetails />} />
+          <Route path="/doctors" element={<DoctorList />} />
+          <Route path="/edit-doctor/:id" element={<EditDoctor />} />
 
           {/*Thihini*/}
           <Route path="/appointments" element={<Appointments />} />
