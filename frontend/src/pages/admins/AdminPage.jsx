@@ -5,13 +5,23 @@ const AdminPage = () => {
   return (
     <div className="min-h-screen flex flex-col  bg-gray-100">
       <h1 className="text-2xl font-bold mb-6">Admin Dashboard</h1>
-      <div className="space-y-4">
-        <Link
-          to="/admin/symptoms"
-          className="bg-blue-500 text-white px-6 py-2 rounded-lg shadow-md hover:bg-blue-600"
-        >
-          Symptom Management
-        </Link>
+      <div className="grid grid-cols-4 gap-4">
+        <div className="space-y-4">
+          <Link
+            to="/admin/symptoms"
+            className="bg-blue-500 text-white px-6 py-2 rounded-lg shadow-md hover:bg-blue-600"
+          >
+            Symptom Management
+          </Link>
+        </div>
+        <div className="space-y-4">
+          <Link
+            to="/admin/view-appointments"
+            className="bg-blue-500 text-white px-6 py-2 rounded-lg shadow-md hover:bg-blue-600"
+          >
+            View Appointments
+          </Link>
+        </div>
       </div>
     </div>
   );
