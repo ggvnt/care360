@@ -48,7 +48,7 @@ const Navbar = () => {
         </li>
         <li
           className="hover:text-gray-200 cursor-pointer"
-          onClick={() => navigate("/appoinments")}
+          onClick={() => navigate("/appointments")}
         >
           Appoinments
         </li>

@@ -1,19 +1,21 @@
-import express from "express";
-import {
-  createSymptom,
-  deleteSymptom,
-  getSymptomById,
-  getSymptoms,
-  updateSymptom,
-} from "../../contrallers/admin/symptom.contrallers.js";
+import express from 'express';
+
+import { adminOnly, protectRoute } from '../../middleware/auth.middleware.js';
+import { createSymptom, deleteSymptom, getAllSymptoms, getSymptom, suggestDiagnosis, updateSymptom } from '../../contrallers/symptomController.js';
+
+
 
 const router = express.Router();
 
-// Routes for Symptoms
-router.post("/symptoms/add", createSymptom); // Create a new symptom
-router.get("/symptoms", getSymptoms); // Get all symptoms
-router.get("/:id", getSymptomById); // Get a symptom by ID
-router.put("/:id", updateSymptom); // Update a symptom
-router.delete("/symptoms/:id", deleteSymptom); // Delete a symptom
+// Public routes
+router.get('/', getAllSymptoms);
+router.get('/:id', getSymptom);
+router.post('/diagnose', suggestDiagnosis);
+
+// Protected routes
+router.use(protectRoute);
+router.post('/', adminOnly, createSymptom);
+router.patch('/:id', adminOnly, updateSymptom);
+router.delete('/:id', adminOnly, deleteSymptom);
 
 export default router;
