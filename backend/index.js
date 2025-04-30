@@ -1,7 +1,7 @@
 import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
-import doctorRoutes from "./routes/doctorRoutes.js";
+import doctorRoutes from "./src/routes/doctor/doctorRoutes.js";
 
 const app = express();
 const PORT = process.env.PORT || 5001;

@@ -1,12 +1,21 @@
 import express from "express";
-import Doctor from "../models/Doctor.js";
+import Doctor from "../../models/doctor/Doctor.js";
 
 const router = express.Router();
 
 // Create a new doctor
 router.post("/", async (req, res) => {
   try {
-    const { name, email, specialization, availability } = req.body;
+    const { 
+      fullName, 
+      email, 
+      specialization, 
+      qualifications, 
+      experience, 
+      consultationFee, 
+      contactInfo, 
+      availability 
+    } = req.body;
 
     // Check if the doctor already exists
     const existingDoctor = await Doctor.findOne({ email });
@@ -15,7 +24,16 @@ router.post("/", async (req, res) => {
     }
 
     // Create a new doctor
-    const newDoctor = new Doctor({ name, email, specialization, availability });
+    const newDoctor = new Doctor({ 
+      fullName, 
+      email, 
+      specialization, 
+      qualifications, 
+      experience, 
+      consultationFee, 
+      contactInfo, 
+      availability 
+    });
     await newDoctor.save();
 
     res.status(201).json(newDoctor);
@@ -50,11 +68,29 @@ router.get("/:id", async (req, res) => {
 // Update a doctor by ID
 router.put("/:id", async (req, res) => {
   try {
-    const { name, email, specialization, availability } = req.body;
+    const { 
+      fullName, 
+      email, 
+      specialization, 
+      qualifications, 
+      experience, 
+      consultationFee, 
+      contactInfo, 
+      availability 
+    } = req.body;
 
     const updatedDoctor = await Doctor.findByIdAndUpdate(
       req.params.id,
-      { name, email, specialization, availability },
+      { 
+        fullName, 
+        email, 
+        specialization, 
+        qualifications, 
+        experience, 
+        consultationFee, 
+        contactInfo, 
+        availability 
+      },
       { new: true } // Return the updated document
     );
 
