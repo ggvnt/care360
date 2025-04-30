@@ -6,6 +6,11 @@ const symptomSchema = new mongoose.Schema({
     required: true, // Ensures a symptom must have a name
     trim: true, // Removes extra spaces
   },
+  description: {
+    type: String,
+    required: true,
+    trim: true,
+  },
   possibleConditions: {
     type: [String],
     default: [], // Ensures it's an array even if empty

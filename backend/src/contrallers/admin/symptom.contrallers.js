@@ -3,7 +3,7 @@ import Symptom from "../../models/admins/symptom.models.js";
 // Create a new symptom
 export const createSymptom = async (req, res) => {
   try {
-    const { name, possibleConditions } = req.body;
+    const { name, description, possibleConditions } = req.body;
 
     const symptom = new Symptom({
       name,
