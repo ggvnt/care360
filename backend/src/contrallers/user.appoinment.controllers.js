@@ -1,6 +1,16 @@
 import Doctor from '../models/doctor.models.js';
 import Appointment from '../models/appoinment.models.js';
 
+export const getAllAppointments =  async (req, res) => {
+  try {
+    const appointments = await Appointment.find();
+    res.status(200).json(appointments);
+  } catch (err) {
+    console.log("Error fetching appointments:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+
 export const getAppointment = async (req, res) => {
   const { id } = req.params;
   console.log("user id is :", id);

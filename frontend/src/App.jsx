@@ -30,6 +30,9 @@ import DoctorDashboard from "./pages/DoctorDashboard.jsx";
 import DoctorDetails from "./pages/DoctorDetails.jsx"
 import DoctorList from "./pages/DoctorList.jsx"
 import EditDoctor from "./pages/EditDoctor.jsx"
+import Appointments from "./components/Appointments.jsx";
+import MyBookings from "./components/MyBookings.jsx";
+import ReviewAppointments from "./pages/admins/ReviewAppointments.jsx";
 
 //
 
@@ -80,6 +83,9 @@ const App = () => {
           <Route path="/DoctorList" element={<DoctorList />} />
           <Route path="/EditDoctor" element={<EditDoctor />} />
 
+          {/*Thihini*/}
+          <Route path="/appointments" element={<Appointments />} />
+          <Route path="/my-bookings" element={<MyBookings />} />
           {/* Admin-only route */}
           <Route
             path="/admin/dashboard"
@@ -92,6 +98,16 @@ const App = () => {
             element={
               authUser?.role === "admin" ? (
                 <SymptomsPage />
+              ) : (
+                <Navigate to="/" />
+              )
+            }
+          />
+          <Route
+            path="/admin/view-appointments"
+            element={
+              authUser?.role === "admin" ? (
+                <ReviewAppointments />
               ) : (
                 <Navigate to="/" />
               )
