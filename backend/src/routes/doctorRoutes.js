@@ -1,5 +1,5 @@
 import express from "express";
-import Doctor from "../models/Doctor.js";
+import Doctor from "../models/doctor.models.js";
 
 const router = express.Router();
 
@@ -30,6 +30,7 @@ router.get("/", async (req, res) => {
     const doctors = await Doctor.find();
     res.status(200).json(doctors);
   } catch (err) {
+    console.log("Error fetching doctors:", err);
     res.status(500).json({ message: "Server error", error: err.message });
   }
 });
