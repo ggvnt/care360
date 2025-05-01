@@ -7,11 +7,15 @@ const appoinmentSchema = new mongoose.Schema(
       ref: 'User',
       required: true,
     },
-    preferredDoctor : {
+    preferredDoctor: {
         type: String,
         required: true,
     },
-    appointmentDateTime: {
+    appointmentDate: {
+        type: String,
+        required: true,
+    },
+    timeSlot: { // New field for time slot
         type: String,
         required: true,
     },

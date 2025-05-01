@@ -46,16 +46,58 @@ export const getDoctors = async (req, res) => {
   }
 }
 
-export const createAppointment = async (req, res) => {
-  console.log(req.body);
-  try {
-    const newAppointment = new Appointment(req.body);
-    await newAppointment.save();
-    res.json({ success: true, message: "Appointment booked successfully!", data: newAppointment });
-  } catch (error) {
-    res.status(500).json({ success: false, message: "Error booking appointment", error });
+export const getAvailableSlots = async (req, res) => {
+  const { doctor, date } = req.body; // Use req.body for POST requests
+
+  if (!doctor || !date) {
+      return res.status(400).json({ success: false, message: "Doctor and date are required" });
   }
-}
+
+  try {
+      // Explicitly set the start time to 5:00 PM (17:00)
+      const startTime = new Date(date);
+      startTime.setUTCHours(17, 0, 0, 0); // Set hours to 17:00:00.000
+
+      // Generate 5 slots of 20 minutes each
+      const slots = Array.from({ length: 5 }, (_, i) => {
+          const slotTime = new Date(startTime.getTime() + i * 20 * 60 * 1000);
+          return slotTime.toISOString().split("T")[1].slice(0, 5); // Format as HH:mm
+      });
+
+      // Fetch booked appointments for the doctor on the given date
+      const bookedAppointments = await Appointment.find({ preferredDoctor: doctor, appointmentDate: date });
+      const bookedSlots = bookedAppointments.map((appointment) => appointment.timeSlot);
+
+      // Filter out booked slots
+      const availableSlots = slots.filter((slot) => !bookedSlots.includes(slot));
+      res.status(200).json({ success: true, slots: availableSlots });
+  } catch (error) {
+      console.error("Error fetching available slots:", error);
+      res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+export const createAppointment = async (req, res) => {
+  const { preferredDoctor, appointmentDate, timeSlot } = req.body;
+
+  try {
+      const existingAppointment = await Appointment.findOne({
+          preferredDoctor,
+          appointmentDate,
+          timeSlot,
+      });
+
+      if (existingAppointment) {
+          return res.status(400).json({ success: false, message: "Time slot is already booked" });
+      }
+
+      const newAppointment = new Appointment(req.body);
+      await newAppointment.save();
+      res.json({ success: true, message: "Appointment booked successfully!", data: newAppointment });
+  } catch (error) {
+      res.status(500).json({ success: false, message: "Error booking appointment", error });
+  }
+};
 
 export const updateAppointment = async (req, res) => {
   const { id } = req.params;
