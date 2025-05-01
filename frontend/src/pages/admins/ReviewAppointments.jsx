@@ -10,7 +10,7 @@ const ReviewAppointments = () => {
     // Fetch all appointments when the component loads
     const fetchAppointments = async () => {
       try {
-        const response = await axiosInstance.get("/my/appointments");
+        const response = await axiosInstance.get("/appointments");
         // Safeguard to ensure response.data exists
         const fetchedAppointments = response?.data || [];
         setAppointments(fetchedAppointments);
@@ -44,7 +44,8 @@ const ReviewAppointments = () => {
               <th className="border border-gray-300 px-4 py-2">Contact Number</th>
               <th className="border border-gray-300 px-4 py-2">Date of Birth</th>
               <th className="border border-gray-300 px-4 py-2">Preferred Doctor</th>
-              <th className="border border-gray-300 px-4 py-2">Appointment Date & Time</th>
+              <th className="border border-gray-300 px-4 py-2">Appointment Date</th>
+              <th className="border border-gray-300 px-4 py-2">Time Slot</th>
             </tr>
           </thead>
           <tbody>
@@ -58,12 +59,13 @@ const ReviewAppointments = () => {
                   <td className="border border-gray-300 px-4 py-2">{appointment.contactNumber}</td>
                   <td className="border border-gray-300 px-4 py-2">{appointment.dateOfBirth}</td>
                   <td className="border border-gray-300 px-4 py-2">{appointment.preferredDoctor}</td>
-                  <td className="border border-gray-300 px-4 py-2">{appointment.appointmentDateTime}</td>
+                  <td className="border border-gray-300 px-4 py-2">{appointment.appointmentDate}</td>
+                  <td className="border border-gray-300 px-4 py-2">{appointment.timeSlot}</td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan="8" className="border border-gray-300 px-4 py-2 text-center">
+                <td colSpan="9" className="border border-gray-300 px-4 py-2 text-center">
                   No appointments found.
                 </td>
               </tr>
