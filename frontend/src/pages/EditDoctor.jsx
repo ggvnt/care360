@@ -1,327 +1,453 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useForm, useFieldArray } from "react-hook-form";
+import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
-import { useState as useFormState } from "react";
 
 const EditDoctor = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [formSubmitting, setFormSubmitting] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    specialization: "",
-    availability: "",
+  const {
+    register,
+    handleSubmit,
+    control,
+    formState: { errors },
+    reset,
+    setValue,
+  } = useForm({
+    defaultValues: {
+      name: "",
+      email: "",
+      specialization: "",
+      qualifications: [{ value: "" }],
+      experience: "",
+      consultationFee: "",
+      phone: "",
+      address: "",
+      availability: "",
+    },
   });
-  const [formErrors, setFormErrors] = useState({});
-  const [successMessage, setSuccessMessage] = useState("");
 
-  // Available specializations list
-  const specializations = [
-    "Cardiology",
-    "Dermatology",
-    "Endocrinology",
-    "Gastroenterology",
-    "Neurology",
-    "Obstetrics",
-    "Oncology",
-    "Ophthalmology",
-    "Orthopedics",
-    "Pediatrics",
-    "Psychiatry",
-    "Radiology",
-    "Urology",
-  ];
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "qualifications",
+  });
 
-  // Fetch doctor data
+  const [serverMessage, setServerMessage] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
   useEffect(() => {
-    const fetchDoctorData = async () => {
+    const fetchDoctor = async () => {
       try {
-        const { data } = await axios.get(`http://localhost:5001/api/doctors/${id}`);
-        setFormData({
-          name: data.name || "",
-          email: data.email || "",
-          specialization: data.specialization || "",
-          availability: data.availability || "",
+        const response = await axios.get(`http://localhost:5001/api/doctors/${id}`);
+        const doctor = response.data;
+        // Populate form with doctor's data
+        setValue("name", doctor.name);
+        setValue("email", doctor.email);
+        setValue("specialization", doctor.specialization);
+        setValue(
+          "qualifications",
+          doctor.qualifications.length > 0
+            ? doctor.qualifications.map((q) => ({ value: q }))
+            : [{ value: "" }]
+        );
+        setValue("experience", doctor.experience.toString());
+        setValue("consultationFee", doctor.consultationFee.toString());
+        setValue("phone", doctor.phone);
+        setValue("address", doctor.address);
+        setValue("availability", doctor.availability);
+        setIsLoading(false);
+      } catch (error) {
+        console.error("Error fetching doctor:", error.response);
+        setServerMessage({
+          type: "error",
+          text:
+            error.response?.data?.message ||
+            "Failed to load doctor data. Please try again.",
         });
-        setLoading(false);
-      } catch (err) {
-        setError("Failed to fetch doctor details. Please try again later.");
-        setLoading(false);
+        setIsLoading(false);
       }
     };
+    fetchDoctor();
+  }, [id, setValue]);
 
-    fetchDoctorData();
-  }, [id]);
+  const onSubmit = async (data) => {
+    setIsSubmitting(true);
+    setServerMessage(null);
 
-  // Form input change handler
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
-    
-    // Clear field-specific error when user starts typing
-    if (formErrors[name]) {
-      setFormErrors({
-        ...formErrors,
-        [name]: "",
+    // Transform and validate qualifications
+    const qualifications = data.qualifications
+      .map((q) => q.value)
+      .filter((q) => q.trim() !== "");
+
+    // Prevent submission if qualifications is empty
+    if (qualifications.length === 0) {
+      setServerMessage({
+        type: "error",
+        text: "At least one qualification is required.",
       });
-    }
-  };
-
-  // Form validation
-  const validateForm = () => {
-    const errors = {};
-    
-    // Name validation
-    if (!formData.name.trim()) {
-      errors.name = "Name is required";
-    } else if (formData.name.trim().length < 3) {
-      errors.name = "Name must be at least 3 characters";
-    }
-    
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!formData.email.trim()) {
-      errors.email = "Email is required";
-    } else if (!emailRegex.test(formData.email)) {
-      errors.email = "Please enter a valid email address";
-    }
-    
-    // Specialization validation
-    if (!formData.specialization) {
-      errors.specialization = "Specialization is required";
-    }
-    
-    // Availability validation
-    if (!formData.availability.trim()) {
-      errors.availability = "Availability information is required";
-    }
-    
-    return errors;
-  };
-
-  // Form submission handler
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    // Validate form
-    const validationErrors = validateForm();
-    if (Object.keys(validationErrors).length > 0) {
-      setFormErrors(validationErrors);
+      setIsSubmitting(false);
       return;
     }
-    
-    setFormSubmitting(true);
-    
+
+    const payload = {
+      name: data.name,
+      email: data.email,
+      specialization: data.specialization,
+      qualifications,
+      experience: Number(data.experience),
+      consultationFee: Number(data.consultationFee),
+      phone: data.phone,
+      address: data.address,
+      availability: data.availability,
+    };
+
+    // Log payload for debugging
+    console.log("Payload:", payload);
+
     try {
-      await axios.put(`http://localhost:5001/api/doctors/${id}`, formData);
-      setSuccessMessage("Doctor information updated successfully!");
-      
-      // Navigate after showing success message
-      setTimeout(() => {
-        navigate("/doctors");
-      }, 1500);
-    } catch (err) {
-      setError("Error updating doctor information. Please try again.");
-      setFormSubmitting(false);
+      const response = await axios.put(`/api/doctors/${id}`, payload);
+      setServerMessage({
+        type: "success",
+        text: response.data.message || "Doctor updated successfully",
+      });
+      setTimeout(() => navigate("/doctors"), 2000); // Redirect after success
+    } catch (error) {
+      console.error("Error response:", error.response);
+      const errorMessage =
+        error.response?.data?.message ||
+        error.response?.data?.errors?.join(", ") ||
+        "Failed to update doctor. Please try again.";
+      setServerMessage({
+        type: "error",
+        text: errorMessage,
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="text-center p-8">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
-          <p className="mt-4 text-gray-700">Loading doctor information...</p>
-        </div>
+      <div className="max-w-2xl mx-auto p-6">
+        <p className="text-gray-600">Loading doctor data...</p>
       </div>
     );
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md space-y-8">
-        {/* Header */}
+    <div className="max-w-2xl mx-auto p-6 bg-white shadow-md rounded-lg">
+      <h2 className="text-2xl font-bold mb-6 text-gray-800">Edit Doctor</h2>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        {/* Name */}
         <div>
-          <h2 className="text-center text-3xl font-bold tracking-tight text-gray-900">
-            Edit Doctor
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Update the doctor's information in the system
-          </p>
+          <label
+            htmlFor="name"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Full Name
+          </label>
+          <input
+            type="text"
+            id="name"
+            {...register("name", {
+              required: "Full name is required",
+              minLength: {
+                value: 2,
+                message: "Full name must be at least 2 characters",
+              },
+            })}
+            className={`mt-1 block w-full p-2 border rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 ${
+              errors.name ? "border-red-500" : "border-gray-300"
+            }`}
+            placeholder="Dr. John Doe"
+          />
+          {errors.name && (
+            <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
+          )}
         </div>
 
-        {/* Error message */}
-        {error && (
-          <div className="bg-red-50 border-l-4 border-red-400 p-4">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <p className="text-sm text-red-700">{error}</p>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Email */}
+        <div>
+          <label
+            htmlFor="email"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Email
+          </label>
+          <input
+            type="email"
+            id="email"
+            {...register("email", {
+              required: "Email is required",
+              pattern: {
+                value: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+                message: "Invalid email address",
+              },
+            })}
+            className={`mt-1 block w-full p-2 border rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 ${
+              errors.email ? "border-red-500" : "border-gray-300"
+            }`}
+            placeholder="doctor@example.com"
+          />
+          {errors.email && (
+            <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+          )}
+        </div>
 
-        {/* Success message */}
-        {successMessage && (
-          <div className="bg-green-50 border-l-4 border-green-400 p-4">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <p className="text-sm text-green-700">{successMessage}</p>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Specialization */}
+        <div>
+          <label
+            htmlFor="specialization"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Specialization
+          </label>
+          <input
+            type="text"
+            id="specialization"
+            {...register("specialization", {
+              required: "Specialization is required",
+              minLength: {
+                value: 2,
+                message: "Specialization must be at least 2 characters",
+              },
+            })}
+            className={`mt-1 block w-full p-2 border rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 ${
+              errors.specialization ? "border-red-500" : "border-gray-300"
+            }`}
+            placeholder="Cardiology"
+          />
+          {errors.specialization && (
+            <p className="mt-1 text-sm text-red-600">
+              {errors.specialization.message}
+            </p>
+          )}
+        </div>
 
-        {/* Form */}
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="space-y-4 rounded-md shadow-sm">
-            {/* Name field */}
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                Full Name
-              </label>
-              <div className="mt-1">
-                <input
-                  id="name"
-                  name="name"
-                  type="text"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  className={`block w-full rounded-md border ${
-                    formErrors.name ? "border-red-300" : "border-gray-300"
-                  } px-3 py-2 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm`}
-                  placeholder="Dr. John Smith"
-                />
-                {formErrors.name && (
-                  <p className="mt-1 text-sm text-red-600">{formErrors.name}</p>
-                )}
-              </div>
-            </div>
-
-            {/* Email field */}
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email Address
-              </label>
-              <div className="mt-1">
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  className={`block w-full rounded-md border ${
-                    formErrors.email ? "border-red-300" : "border-gray-300"
-                  } px-3 py-2 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm`}
-                  placeholder="doctor@example.com"
-                />
-                {formErrors.email && (
-                  <p className="mt-1 text-sm text-red-600">{formErrors.email}</p>
-                )}
-              </div>
-            </div>
-
-            {/* Specialization field */}
-            <div>
-              <label htmlFor="specialization" className="block text-sm font-medium text-gray-700">
-                Specialization
-              </label>
-              <div className="mt-1">
-                <select
-                  id="specialization"
-                  name="specialization"
-                  value={formData.specialization}
-                  onChange={handleInputChange}
-                  className={`block w-full rounded-md border ${
-                    formErrors.specialization ? "border-red-300" : "border-gray-300"
-                  } px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm`}
+        {/* Qualifications */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            Qualifications
+          </label>
+          {fields.map((field, index) => (
+            <div key={field.id} className="flex items-center mt-1">
+              <input
+                type="text"
+                {...register(`qualifications.${index}.value`, {
+                  required: "Qualification is required",
+                  minLength: {
+                    value: 2,
+                    message: "Qualification must be at least 2 characters",
+                  },
+                })}
+                className={`block w-full p-2 border rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 ${
+                  errors.qualifications?.[index]?.value
+                    ? "border-red-500"
+                    : "border-gray-300"
+                }`}
+                placeholder="MBBS, MD"
+              />
+              {fields.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => remove(index)}
+                  className="ml-2 text-red-600 hover:text-red-800"
                 >
-                  <option value="">Select a specialization</option>
-                  {specializations.map((spec) => (
-                    <option key={spec} value={spec}>
-                      {spec}
-                    </option>
-                  ))}
-                  <option value="Other">Other</option>
-                </select>
-                {formErrors.specialization && (
-                  <p className="mt-1 text-sm text-red-600">{formErrors.specialization}</p>
-                )}
-              </div>
-            </div>
-
-            {/* Availability field */}
-            <div>
-              <label htmlFor="availability" className="block text-sm font-medium text-gray-700">
-                Availability
-              </label>
-              <div className="mt-1">
-                <textarea
-                  id="availability"
-                  name="availability"
-                  rows={3}
-                  value={formData.availability}
-                  onChange={handleInputChange}
-                  className={`block w-full rounded-md border ${
-                    formErrors.availability ? "border-red-300" : "border-gray-300"
-                  } px-3 py-2 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm`}
-                  placeholder="Mon-Fri: 9am-5pm, Wed: 10am-6pm"
-                />
-                {formErrors.availability && (
-                  <p className="mt-1 text-sm text-red-600">{formErrors.availability}</p>
-                )}
-              </div>
-              <p className="mt-1 text-xs text-gray-500">
-                Specify days and hours when the doctor is available for appointments.
-              </p>
-            </div>
-          </div>
-
-          {/* Form buttons */}
-          <div className="flex items-center justify-between gap-4">
-            <button
-              type="button"
-              onClick={() => navigate("/doctors")}
-              className="inline-flex justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={formSubmitting}
-              className="inline-flex justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:bg-blue-300"
-            >
-              {formSubmitting ? (
-                <>
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Updating...
-                </>
-              ) : (
-                "Update Doctor"
+                  Remove
+                </button>
               )}
-            </button>
+              {errors.qualifications?.[index]?.value && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.qualifications[index].value.message}
+                </p>
+              )}
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => append({ value: "" })}
+            className="mt-2 text-indigo-600 hover:text-indigo-800 text-sm"
+          >
+            Add Qualification
+          </button>
+        </div>
+
+        {/* Experience */}
+        <div>
+          <label
+            htmlFor="experience"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Experience (Years)
+          </label>
+          <input
+            type="number"
+            id="experience"
+            {...register("experience", {
+              required: "Experience is required",
+              min: {
+                value: 0,
+                message: "Experience cannot be negative",
+              },
+            })}
+            className={`mt-1 block w-full p-2 border rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 ${
+              errors.experience ? "border-red-500" : "border-gray-300"
+            }`}
+            placeholder="5"
+          />
+          {errors.experience && (
+            <p className="mt-1 text-sm text-red-600">
+              {errors.experience.message}
+            </p>
+          )}
+        </div>
+
+        {/* Consultation Fee */}
+        <div>
+          <label
+            htmlFor="consultationFee"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Consultation Fee ($)
+          </label>
+          <input
+            type="number"
+            id="consultationFee"
+            {...register("consultationFee", {
+              required: "Consultation fee is required",
+              min: {
+                value: 0,
+                message: "Consultation fee cannot be negative",
+              },
+            })}
+            className={`mt-1 block w-full p-2 border rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 ${
+              errors.consultationFee ? "border-red-500" : "border-gray-300"
+            }`}
+            placeholder="100"
+          />
+          {errors.consultationFee && (
+            <p className="mt-1 text-sm text-red-600">
+              {errors.consultationFee.message}
+            </p>
+          )}
+        </div>
+
+        {/* Phone */}
+        <div>
+          <label
+            htmlFor="phone"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Phone
+          </label>
+          <input
+            type="tel"
+            id="phone"
+            {...register("phone", {
+              required: "Phone number is required",
+              pattern: {
+                value: /^\+?[1-9]\d{1,14}$/,
+                message: "Invalid phone number format",
+              },
+            })}
+            className={`mt-1 block w-full p-2 border rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 ${
+              errors.phone ? "border-red-500" : "border-gray-300"
+            }`}
+            placeholder="+1234567890"
+          />
+          {errors.phone && (
+            <p className="mt-1 text-sm text-red-600">{errors.phone.message}</p>
+          )}
+        </div>
+
+        {/* Address */}
+        <div>
+          <label
+            htmlFor="address"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Address
+          </label>
+          <input
+            type="text"
+            id="address"
+            {...register("address", {
+              required: "Address is required",
+              minLength: {
+                value: 5,
+                message: "Address must be at least 5 characters",
+              },
+            })}
+            className={`mt-1 block w-full p-2 border rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 ${errors.address ? "border-red-500" : "border-gray-300"}`}
+            placeholder="123 Main St, City, Country"
+          />
+          {errors.address && (
+            <p className="mt-1 text-sm text-red-600">{errors.address.message}</p>
+          )}
+        </div>
+
+        {/* Availability */}
+        <div>
+          <label
+            htmlFor="availability"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Availability
+          </label>
+          <input
+            type="text"
+            id="availability"
+            {...register("availability", {
+              required: "Availability is required",
+              minLength: {
+                value: 5,
+                message: "Availability must be at least 5 characters",
+              },
+            })}
+            className={`mt-1 block w-full p-2 border rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 ${errors.availability ? "border-red-500" : "border-gray-300"}`}
+            placeholder="Mon-Fri, 9AM-5PM"
+          />
+          {errors.availability && (
+            <p className="mt-1 text-sm text-red-600">
+              {errors.availability.message}
+            </p>
+          )}
+        </div>
+
+        {/* Server Message */}
+        {serverMessage && (
+          <div
+            className={`p-4 rounded-md ${
+              serverMessage.type === "success"
+                ? "bg-green-100 text-green-700"
+                : "bg-red-100 text-red-700"
+            }`}
+          >
+            {serverMessage.text}
           </div>
-        </form>
-      </div>
+        )}
+
+        {/* Submit Button */}
+        <div className="flex space-x-4">
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className={`flex-1 py-2 px-4 bg-indigo-600 text-white font-semibold rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
+              isSubmitting ? "opacity-50 cursor-not-allowed" : ""
+            }`}
+          >
+            {isSubmitting ? "Updating..." : "Update Doctor"}
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate("/doctors")}
+            className="flex-1 py-2 px-4 bg-gray-600 text-white font-semibold rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
     </div>
   );
 };

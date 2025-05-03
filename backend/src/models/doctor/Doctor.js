@@ -2,50 +2,34 @@ import mongoose from "mongoose";
 
 const doctorSchema = new mongoose.Schema({
   fullName: {
-    type: String,
-    required: true,
+    type: String
   },
   email: {
-    type: String,
-    required: true,
-    unique: true,
-    lowercase: true,
-    trim: true,
+    type: String
   },
   specialization: {
-    type: String,
-    required: true,
+    type: String
   },
   qualifications: {
-    type: [String],
-    required: true,
+    type: [String]
   },
   experience: {
-    type: Number, // In years
-    required: true,
-    min: 0,
+    type: Number
   },
   consultationFee: {
-    type: Number,
-    required: true,
-    min: 0,
+    type: Number
   },
-  contactInfo: {
-    phone: {
-      type: String,
-      required: true,
-    },
-    address: {
-      type: String,
-      required: true,
-    },
+  phone: {
+    type: String
+  },
+  address: {
+    type: String
   },
   availability: {
-    type: String,
-    required: true,
-  },
+    type: String
+  }
 }, {
-  timestamps: true // Adds createdAt and updatedAt fields
+  timestamps: true
 });
 
 const Doctor = mongoose.model("Doctor", doctorSchema);

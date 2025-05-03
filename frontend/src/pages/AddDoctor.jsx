@@ -1,479 +1,403 @@
-import React, { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { yupResolver } from "@hookform/resolvers/yup";
-import * as yup from "yup";
-import { useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { useForm, useFieldArray } from "react-hook-form";
 import axios from "axios";
-import { Calendar, Clock, Trash2, Plus } from "lucide-react";
-
-// Define validation schema using yup
-const doctorSchema = yup.object().shape({
-  fullName: yup.string().required("Full name is required"),
-  email: yup.string().email("Invalid email").required("Email is required"),
-  specialization: yup.string().required("Specialization is required"),
-  qualifications: yup
-    .array()
-    .of(yup.string().required("Qualification is required"))
-    .min(1, "At least one qualification is required")
-    .required("Qualifications are required"),
-  experience: yup
-    .number()
-    .typeError("Experience must be a number")
-    .min(0, "Experience cannot be negative")
-    .required("Experience is required"),
-  consultationFee: yup
-    .number()
-    .typeError("Consultation fee must be a number")
-    .min(0, "Consultation fee cannot be negative")
-    .required("Consultation fee is required"),
-  contactInfo: yup.object().shape({
-    phone: yup
-      .string()
-      .matches(/^\d{10}$/, "Phone number must be exactly 10 digits")
-      .required("Phone number is required"),
-    address: yup.string().required("Address is required"),
-  }),
-  availability: yup.string().required("Availability is required"),
-});
 
 const AddDoctor = () => {
-  const navigate = useNavigate();
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
-    watch,
-    setValue,
-    getValues,
+    reset,
   } = useForm({
-    resolver: yupResolver(doctorSchema),
     defaultValues: {
-      qualifications: [""],
-      availabilitySchedule: [],
-    }
+      name: "",
+      email: "",
+      specialization: "",
+      qualifications: [{ value: "" }],
+      experience: "",
+      consultationFee: "",
+      phone: "",
+      address: "",
+      availability: "",
+    },
   });
 
-  // State for availability scheduling
-  const [availabilitySchedule, setAvailabilitySchedule] = useState([]);
-  const [newScheduleItem, setNewScheduleItem] = useState({
-    day: "",
-    startTime: "",
-    endTime: "",
-    date: "",
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "qualifications",
   });
-  const [scheduleType, setScheduleType] = useState("weekly"); // "weekly" or "specific"
 
-  // Days of the week for weekly schedule
-  const daysOfWeek = [
-    "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"
-  ];
-
-  // Handle dynamic qualifications array
-  const qualifications = watch("qualifications", [""]);
-
-  const addQualification = () => {
-    setValue("qualifications", [...qualifications, ""]);
-  };
-
-  const removeQualification = (index) => {
-    const updatedQualifications = qualifications.filter((_, i) => i !== index);
-    setValue("qualifications", updatedQualifications);
-  };
-
-  const updateQualification = (index, value) => {
-    const updatedQualifications = [...qualifications];
-    updatedQualifications[index] = value;
-    setValue("qualifications", updatedQualifications);
-  };
-
-  // Handle schedule type change
-  const handleScheduleTypeChange = (type) => {
-    setScheduleType(type);
-    setAvailabilitySchedule([]);
-    setNewScheduleItem({
-      day: "",
-      startTime: "",
-      endTime: "",
-      date: "",
-    });
-  };
-
-  // Add new availability slot
-  const addAvailabilitySlot = () => {
-    // Validate the new schedule item
-    if (scheduleType === "weekly" && (!newScheduleItem.day || !newScheduleItem.startTime || !newScheduleItem.endTime)) {
-      alert("Please select day, start time and end time");
-      return;
-    }
-    
-    if (scheduleType === "specific" && (!newScheduleItem.date || !newScheduleItem.startTime || !newScheduleItem.endTime)) {
-      alert("Please select date, start time and end time");
-      return;
-    }
-
-    // Add to schedule
-    const updatedSchedule = [...availabilitySchedule, {...newScheduleItem}];
-    setAvailabilitySchedule(updatedSchedule);
-    
-    // Reset form for next entry
-    setNewScheduleItem({
-      day: "",
-      startTime: "",
-      endTime: "",
-      date: "",
-    });
-    
-    // Update the availability field for form submission
-    updateAvailabilityValue(updatedSchedule);
-  };
-
-  // Remove availability slot
-  const removeAvailabilitySlot = (index) => {
-    const updatedSchedule = availabilitySchedule.filter((_, i) => i !== index);
-    setAvailabilitySchedule(updatedSchedule);
-    updateAvailabilityValue(updatedSchedule);
-  };
-
-  // Update availability string for form submission
-  const updateAvailabilityValue = (schedule) => {
-    if (schedule.length === 0) {
-      setValue("availability", "");
-      return;
-    }
-
-    // Format the schedule into a string
-    const formattedSchedule = schedule.map(slot => {
-      if (scheduleType === "weekly") {
-        return `${slot.day}: ${slot.startTime} - ${slot.endTime}`;
-      } else {
-        return `${slot.date}: ${slot.startTime} - ${slot.endTime}`;
-      }
-    }).join("; ");
-
-    setValue("availability", formattedSchedule);
-  };
+  const [serverMessage, setServerMessage] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const onSubmit = async (data) => {
+    setIsSubmitting(true);
+    setServerMessage(null);
+
+    // Transform and validate qualifications
+    const qualifications = data.qualifications
+      .map((q) => q.value)
+      .filter((q) => q.trim() !== "");
+
+    // Prevent submission if qualifications is empty
+    if (qualifications.length === 0) {
+      setServerMessage({
+        type: "error",
+        text: "At least one qualification is required.",
+      });
+      setIsSubmitting(false);
+      return;
+    }
+
+    const payload = {
+      name: data.name,
+      email: data.email,
+      specialization: data.specialization,
+      qualifications,
+      experience: Number(data.experience),
+      consultationFee: Number(data.consultationFee),
+      phone: data.phone,
+      address: data.address,
+      availability: data.availability,
+    };
+
+    // Log payload for debugging
+    console.log("Payload:", payload);
+
     try {
-      // Send POST request to the backend API
-      const response = await axios.post("http://localhost:5001/api/doctors", data);
-      console.log("Doctor added successfully:", response.data);
-
-      // Redirect to the doctors list page after successful submission
-      navigate("/doctors");
+      const response = await axios.post("http://localhost:5001/api/doctors", payload);
+      setServerMessage({
+        type: "success",
+        text: response.data.message,
+      });
+      reset();
     } catch (error) {
-      console.error("Error adding doctor:", error);
-
-      // Display error message to the user
-      if (error.response) {
-        alert(`Error: ${error.response.data.message}`);
-      } else {
-        alert("An error occurred while adding the doctor. Please try again.");
-      }
+      // Log full error for debugging
+      console.error("Error response:", error.response);
+      const errorMessage =
+        error.response?.data?.message ||
+        error.response?.data?.errors?.join(", ") ||
+        "Failed to add doctor. Please try again.";
+      setServerMessage({
+        type: "error",
+        text: errorMessage,
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleCancel = () => {
-    navigate("/doctors"); // Redirect to the doctors list page
-  };
-
-  // Get today's date in YYYY-MM-DD format
-  const today = new Date().toISOString().split('T')[0];
-
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center py-8">
-      <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-2xl">
-        <h1 className="text-2xl font-bold mb-6 text-center">Add Doctor</h1>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Full Name:</label>
-            <input
-              type="text"
-              {...register("fullName")}
-              className={`mt-1 block w-full px-3 py-2 border ${
-                errors.fullName ? "border-red-500" : "border-gray-300"
-              } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
-            />
-            {errors.fullName && (
-              <p className="text-red-500 text-sm mt-1">{errors.fullName.message}</p>
-            )}
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Email:</label>
-            <input
-              type="email"
-              {...register("email")}
-              className={`mt-1 block w-full px-3 py-2 border ${
-                errors.email ? "border-red-500" : "border-gray-300"
-              } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
-            />
-            {errors.email && (
-              <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
-            )}
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Specialization:</label>
-            <select
-              {...register("specialization")}
-              className={`mt-1 block w-full px-3 py-2 border ${
-                errors.specialization ? "border-red-500" : "border-gray-300"
-              } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
-            >
-              <option value="">Select Specialization</option>
-              <option value="Cardiology">Cardiology</option>
-              <option value="Dermatology">Dermatology</option>
-              <option value="Orthopedics">Orthopedics</option>
-              <option value="Pediatrics">Pediatrics</option>
-              <option value="Neurology">Neurology</option>
-              <option value="Oncology">Oncology</option>
-              <option value="Gynecology">Gynecology</option>
-              <option value="Radiology">Radiology</option>
-              <option value="General Medicine">General Medicine</option>
-            </select>
-            {errors.specialization && (
-              <p className="text-red-500 text-sm mt-1">{errors.specialization.message}</p>
-            )}
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Qualifications:</label>
-            {qualifications.map((qual, index) => (
-              <div key={index} className="flex gap-2 mb-2">
-                <input
-                  type="text"
-                  value={qual}
-                  onChange={(e) => updateQualification(index, e.target.value)}
-                  className={`mt-1 block w-full px-3 py-2 border ${
-                    errors.qualifications?.[index] ? "border-red-500" : "border-gray-300"
-                  } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
-                  placeholder={`Qualification ${index + 1}`}
-                />
-                {qualifications.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => removeQualification(index)}
-                    className="mt-1 px-3 py-2 bg-red-500 text-white rounded-md"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-            ))}
-            <button
-              type="button"
-              onClick={addQualification}
-              className="mt-2 px-3 py-2 bg-indigo-600 text-white rounded-md flex items-center"
-            >
-              <Plus className="h-4 w-4 mr-1" /> Add Qualification
-            </button>
-            {errors.qualifications && (
-              <p className="text-red-500 text-sm mt-1">{errors.qualifications.message}</p>
-            )}
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Experience (Years):</label>
-            <input
-              type="number"
-              {...register("experience")}
-              className={`mt-1 block w-full px-3 py-2 border ${
-                errors.experience ? "border-red-500" : "border-gray-300"
-              } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
-            />
-            {errors.experience && (
-              <p className="text-red-500 text-sm mt-1">{errors.experience.message}</p>
-            )}
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Consultation Fee ($):</label>
-            <input
-              type="number"
-              {...register("consultationFee")}
-              className={`mt-1 block w-full px-3 py-2 border ${
-                errors.consultationFee ? "border-red-500" : "border-gray-300"
-              } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
-            />
-            {errors.consultationFee && (
-              <p className="text-red-500 text-sm mt-1">{errors.consultationFee.message}</p>
-            )}
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Phone Number:</label>
-            <input
-              type="text"
-              {...register("contactInfo.phone")}
-              className={`mt-1 block w-full px-3 py-2 border ${
-                errors.contactInfo?.phone ? "border-red-500" : "border-gray-300"
-              } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
-            />
-            {errors.contactInfo?.phone && (
-              <p className="text-red-500 text-sm mt-1">{errors.contactInfo.phone.message}</p>
-            )}
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Address:</label>
-            <input
-              type="text"
-              {...register("contactInfo.address")}
-              className={`mt-1 block w-full px-3 py-2 border ${
-                errors.contactInfo?.address ? "border-red-500" : "border-gray-300"
-              } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
-            />
-            {errors.contactInfo?.address && (
-              <p className="text-red-500 text-sm mt-1">{errors.contactInfo.address.message}</p>
-            )}
-          </div>
-          
-          {/* Availability Section with Calendar */}
-          <div className="border border-gray-200 rounded-md p-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Availability Schedule:</label>
-            
-            {/* Schedule Type Selector */}
-            <div className="flex gap-4 mb-4">
-              <label className="inline-flex items-center">
-                <input
-                  type="radio"
-                  name="scheduleType"
-                  checked={scheduleType === "weekly"}
-                  onChange={() => handleScheduleTypeChange("weekly")}
-                  className="h-4 w-4 text-indigo-600"
-                />
-                <span className="ml-2 text-sm">Weekly Schedule</span>
-              </label>
-              <label className="inline-flex items-center">
-                <input
-                  type="radio"
-                  name="scheduleType"
-                  checked={scheduleType === "specific"}
-                  onChange={() => handleScheduleTypeChange("specific")}
-                  className="h-4 w-4 text-indigo-600"
-                />
-                <span className="ml-2 text-sm">Specific Dates</span>
-              </label>
-            </div>
-            
-            {/* Add New Availability UI */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-              {scheduleType === "weekly" ? (
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Day</label>
-                  <select
-                    value={newScheduleItem.day}
-                    onChange={(e) => setNewScheduleItem({...newScheduleItem, day: e.target.value})}
-                    className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  >
-                    <option value="">Select Day</option>
-                    {daysOfWeek.map((day) => (
-                      <option key={day} value={day}>{day}</option>
-                    ))}
-                  </select>
-                </div>
-              ) : (
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Date</label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Calendar className="h-4 w-4 text-gray-400" />
-                    </div>
-                    <input
-                      type="date"
-                      min={today}
-                      value={newScheduleItem.date}
-                      onChange={(e) => setNewScheduleItem({...newScheduleItem, date: e.target.value})}
-                      className="block w-full pl-10 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    />
-                  </div>
-                </div>
+    <div className="max-w-2xl mx-auto p-6 bg-white shadow-md rounded-lg">
+      <h2 className="text-2xl font-bold mb-6 text-gray-800">Add New Doctor</h2>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        {/* Name */}
+        <div>
+          <label
+            htmlFor="name"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Full Name
+          </label>
+          <input
+            type="text"
+            id="name"
+            {...register("name", {
+              required: "Full name is required",
+              minLength: {
+                value: 2,
+                message: "Full name must be at least 2 characters",
+              },
+            })}
+            className={`mt-1 block w-full p-2 border rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 ${
+              errors.name ? "border-red-500" : "border-gray-300"
+            }`}
+            placeholder="Dr. John Doe"
+          />
+          {errors.name && (
+            <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
+          )}
+        </div>
+
+        {/* Email */}
+        <div>
+          <label
+            htmlFor="email"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Email
+          </label>
+          <input
+            type="email"
+            id="email"
+            {...register("email", {
+              required: "Email is required",
+              pattern: {
+                value: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+                message: "Invalid email address",
+              },
+            })}
+            className={`mt-1 block w-full p-2 border rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 ${
+              errors.email ? "border-red-500" : "border-gray-300"
+            }`}
+            placeholder="doctor@example.com"
+          />
+          {errors.email && (
+            <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+          )}
+        </div>
+
+        {/* Specialization */}
+        <div>
+          <label
+            htmlFor="specialization"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Specialization
+          </label>
+          <input
+            type="text"
+            id="specialization"
+            {...register("specialization", {
+              required: "Specialization is required",
+              minLength: {
+                value: 2,
+                message: "Specialization must be at least 2 characters",
+              },
+            })}
+            className={`mt-1 block w-full p-2 border rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 ${
+              errors.specialization ? "border-red-500" : "border-gray-300"
+            }`}
+            placeholder="Cardiology"
+          />
+          {errors.specialization && (
+            <p className="mt-1 text-sm text-red-600">
+              {errors.specialization.message}
+            </p>
+          )}
+        </div>
+
+        {/* Qualifications */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            Qualifications
+          </label>
+          {fields.map((field, index) => (
+            <div key={field.id} className="flex items-center mt-1">
+              <input
+                type="text"
+                {...register(`qualifications.${index}.value`, {
+                  required: "Qualification is required",
+                  minLength: {
+                    value: 2,
+                    message: "Qualification must be at least 2 characters",
+                  },
+                })}
+                className={`block w-full p-2 border rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 ${
+                  errors.qualifications?.[index]?.value
+                    ? "border-red-500"
+                    : "border-gray-300"
+                }`}
+                placeholder="MBBS, MD"
+              />
+              {fields.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => remove(index)}
+                  className="ml-2 text-red-600 hover:text-red-800"
+                >
+                  Remove
+                </button>
               )}
-              
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Start Time</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Clock className="h-4 w-4 text-gray-400" />
-                  </div>
-                  <input
-                    type="time"
-                    value={newScheduleItem.startTime}
-                    onChange={(e) => setNewScheduleItem({...newScheduleItem, startTime: e.target.value})}
-                    className="block w-full pl-10 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">End Time</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Clock className="h-4 w-4 text-gray-400" />
-                  </div>
-                  <input
-                    type="time"
-                    value={newScheduleItem.endTime}
-                    onChange={(e) => setNewScheduleItem({...newScheduleItem, endTime: e.target.value})}
-                    className="block w-full pl-10 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  />
-                </div>
-              </div>
+              {errors.qualifications?.[index]?.value && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.qualifications[index].value.message}
+                </p>
+              )}
             </div>
-            
-            <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={addAvailabilitySlot}
-                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 flex items-center"
-              >
-                <Plus className="h-4 w-4 mr-1" /> Add Slot
-              </button>
-            </div>
-            
-            {/* Display Added Availability Slots */}
-            {availabilitySchedule.length > 0 && (
-              <div className="mt-4">
-                <h3 className="text-sm font-medium text-gray-700 mb-2">Scheduled Availability:</h3>
-                <div className="bg-gray-50 rounded-md p-3 max-h-40 overflow-y-auto">
-                  {availabilitySchedule.map((slot, index) => (
-                    <div key={index} className="flex justify-between items-center py-2 border-b border-gray-200 last:border-b-0">
-                      <span className="text-sm">
-                        {scheduleType === "weekly" 
-                          ? `${slot.day}: ${slot.startTime} - ${slot.endTime}`
-                          : `${new Date(slot.date).toLocaleDateString()}: ${slot.startTime} - ${slot.endTime}`}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => removeAvailabilitySlot(index)}
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            
-            {/* Hidden input for availability value */}
-            <input type="hidden" {...register("availability")} />
-            {errors.availability && (
-              <p className="text-red-500 text-sm mt-1">{errors.availability.message}</p>
-            )}
+          ))}
+          <button
+            type="button"
+            onClick={() => append({ value: "" })}
+            className="mt-2 text-indigo-600 hover:text-indigo-800 text-sm"
+          >
+            Add Qualification
+          </button>
+        </div>
+
+        {/* Experience */}
+        <div>
+          <label
+            htmlFor="experience"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Experience (Years)
+          </label>
+          <input
+            type="number"
+            id="experience"
+            {...register("experience", {
+              required: "Experience is required",
+              min: {
+                value: 0,
+                message: "Experience cannot be negative",
+              },
+            })}
+            className={`mt-1 block w-full p-2 border rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 ${
+              errors.experience ? "border-red-500" : "border-gray-300"
+            }`}
+            placeholder="5"
+          />
+          {errors.experience && (
+            <p className="mt-1 text-sm text-red-600">
+              {errors.experience.message}
+            </p>
+          )}
+        </div>
+
+        {/* Consultation Fee */}
+        <div>
+          <label
+            htmlFor="consultationFee"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Consultation Fee ($)
+          </label>
+          <input
+            type="number"
+            id="consultationFee"
+            {...register("consultationFee", {
+              required: "Consultation fee is required",
+              min: {
+                value: 0,
+                message: "Consultation fee cannot be negative",
+              },
+            })}
+            className={`mt-1 block w-full p-2 border rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 ${
+              errors.consultationFee ? "border-red-500" : "border-gray-300"
+            }`}
+            placeholder="100"
+          />
+          {errors.consultationFee && (
+            <p className="mt-1 text-sm text-red-600">
+              {errors.consultationFee.message}
+            </p>
+          )}
+        </div>
+
+        {/* Phone */}
+        <div>
+          <label
+            htmlFor="phone"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Phone
+          </label>
+          <input
+            type="tel"
+            id="phone"
+            {...register("phone", {
+              required: "Phone number is required",
+              pattern: {
+                value: /^\+?[1-9]\d{1,14}$/,
+                message: "Invalid phone number format",
+              },
+            })}
+            className={`mt-1 block w-full p-2 border rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 ${
+              errors.phone ? "border-red-500" : "border-gray-300"
+            }`}
+            placeholder="+1234567890"
+          />
+          {errors.phone && (
+            <p className="mt-1 text-sm text-red-600">{errors.phone.message}</p>
+          )}
+        </div>
+
+        {/* Address */}
+        <div>
+          <label
+            htmlFor="address"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Address
+          </label>
+          <input
+            type="text"
+            id="address"
+            {...register("address", {
+              required: "Address is required",
+              minLength: {
+                value: 5,
+                message: "Address must be at least 5 characters",
+              },
+            })}
+            className={`mt-1 block w-full p-2 border rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 ${
+              errors.address ? "border-red-500" : "border-gray-300"
+            }`}
+            placeholder="123 Main St, City, Country"
+          />
+          {errors.address && (
+            <p className="mt-1 text-sm text-red-600">{errors.address.message}</p>
+          )}
+        </div>
+
+        {/* Availability */}
+        <div>
+          <label
+            htmlFor="availability"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Availability
+          </label>
+          <input
+            type="text"
+            id="availability"
+            {...register("availability", {
+              required: "Availability is required",
+              minLength: {
+                value: 5,
+                message: "Availability must be at least 5 characters",
+              },
+            })}
+            className={`mt-1 block w-full p-2 border rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 ${
+              errors.availability ? "border-red-500" : "border-gray-300"
+            }`}
+            placeholder="Mon-Fri, 9AM-5PM"
+          />
+          {errors.availability && (
+            <p className="mt-1 text-sm text-red-600">
+              {errors.availability.message}
+            </p>
+          )}
+        </div>
+
+        {/* Server Message */}
+        {serverMessage && (
+          <div
+            className={`p-4 rounded-md ${
+              serverMessage.type === "success"
+                ? "bg-green-100 text-green-700"
+                : "bg-red-100 text-red-700"
+            }`}
+          >
+            {serverMessage.text}
           </div>
-          
-          <div className="flex gap-4">
-            <button
-              type="submit"
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            >
-              Add Doctor
-            </button>
-            <button
-              type="button"
-              onClick={handleCancel}
-              className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      </div>
+        )}
+
+        {/* Submit Button */}
+        <div>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className={`w-full py-2 px-4 bg-indigo-600 text-white font-semibold rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
+              isSubmitting ? "opacity-50 cursor-not-allowed" : ""
+            }`}
+          >
+            {isSubmitting ? "Submitting..." : "Add Doctor"}
+          </button>
+        </div>
+      </form>
     </div>
   );
 };
