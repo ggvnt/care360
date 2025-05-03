@@ -3,10 +3,11 @@ import { axiosInstance } from "../../lib/axios";
 import toast from "react-hot-toast";
 
 export const useAuthStore = create((set) => ({
-  authUser: JSON.parse(localStorage.getItem("authUser")) || null,
+  authUser:  null,
   isSigningUp: false,
   isLoggingIn: false,
   isCheckingAuth: true,
+  
 
   checkAuth: async () => {
     if (localStorage.getItem("authUser")) {

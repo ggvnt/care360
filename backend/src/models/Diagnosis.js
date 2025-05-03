@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from "mongoose";
 
 const diagnosisSchema = new mongoose.Schema({
   user: {
@@ -11,9 +11,20 @@ const diagnosisSchema = new mongoose.Schema({
     ref: 'Symptom',
     required: true
   }],
+  ageGroup: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'AgeGroup',
+    required: true
+  },
+  sex: {
+    type: String,
+    enum: ['male', 'female', 'other'],
+    required: true
+  },
   possibleConditions: [{
     condition: {
-      type: String,
+      type: mongoose.Schema.ObjectId,
+      ref: 'Condition',
       required: true
     },
     probability: {
@@ -22,8 +33,13 @@ const diagnosisSchema = new mongoose.Schema({
       min: 0,
       max: 100
     },
-    description: String,
-    recommendedActions: [String]
+    matchingSymptoms: [{
+      symptom: {
+        type: mongoose.Schema.ObjectId,
+        ref: 'Symptom'
+      },
+      importance: Number
+    }]
   }],
   createdAt: {
     type: Date,
@@ -31,4 +47,5 @@ const diagnosisSchema = new mongoose.Schema({
   }
 });
 
-module.exports = mongoose.model('Diagnosis', diagnosisSchema);
+const Diagnosis = mongoose.model("Diagnosis", diagnosisSchema);
+export default Diagnosis;

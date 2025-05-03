@@ -8,6 +8,9 @@ const ProfilePage = () => {
   const { authUser, logout, isUpdatingProfile, updateProfile } = useAuthStore();
   const navigate = useNavigate();
 
+  // console.log("authUser", authUser);
+
+
   // Form state
   const [editMode, setEditMode] = useState(false);
   const [formData, setFormData] = useState({
