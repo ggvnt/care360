@@ -30,9 +30,9 @@ import DoctorDashboard from "./pages/DoctorDashboard.jsx";
 import DoctorDetails from "./pages/DoctorDetails.jsx"
 import DoctorList from "./pages/DoctorList.jsx"
 import EditDoctor from "./pages/EditDoctor.jsx"
-import Appointments from "./components/Appointments.jsx";
-import MyBookings from "./components/MyBookings.jsx";
 import ReviewAppointments from "./pages/admins/ReviewAppointments.jsx";
+import Appointments from "./pages/appointments/Appointments.jsx";
+import MyBookings from "./pages/appointments/MyBookings.jsx";
 
 //
 

@@ -1,5 +1,4 @@
-import axios from "axios";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { axiosInstance } from "../../lib/axios";
 import { useAuthStore } from "../../store/auth/useAuthStore";
 import toast from "react-hot-toast";
@@ -13,11 +12,48 @@ export default function Appointments() {
         contactNumber: "",
         email: "",
         preferredDoctor: "",
-        appointmentDateTime: new Date(),
-        userId: authUser._id
+        appointmentDate: "",
+        timeSlot: "",
     };
     const [formData, setFormData] = useState(appointmentObj);
     const [errors, setErrors] = useState({});
+    const [doctors, setDoctors] = useState([]);
+    const [availableSlots, setAvailableSlots] = useState([]);
+
+    // Fetch doctors from the backend
+    useEffect(() => {
+        const fetchDoctors = async () => {
+            try {
+                const response = await axiosInstance.get("/appointments/get-doctors");
+                setDoctors(response.data.data);
+            } catch (error) {
+                console.error("Error fetching doctors:", error);
+                toast.error("Failed to load doctors. Please try again.");
+            }
+        };
+
+        fetchDoctors();
+    }, []);
+
+    // Fetch available slots when a date is selected
+    const fetchAvailableSlots = async (doctor, date) => {
+        if (!doctor || !date) return; // Ensure both doctor and date are provided
+        try {
+            const response = await axiosInstance.post(`/appointments/get-available-slots`, {
+                doctor,
+                date,
+            });
+            console.log("Available slots response:", response.data); // Debugging
+            setAvailableSlots(response.data.slots); // Update available slots
+        } catch (error) {
+            console.error("Error fetching available slots:", error);
+            toast.error("Failed to load available slots. Please try again.");
+        }
+    };
+    
+    useEffect(() => {
+        console.log("Available slots updated:", availableSlots);
+    }, [availableSlots]);
 
     const validate = () => {
         let newErrors = {};
@@ -40,86 +76,139 @@ export default function Appointments() {
         if (!formData.preferredDoctor) {
             newErrors.preferredDoctor = "Preferred Doctor is required";
         }
-        if (!formData.appointmentDateTime) {
-            newErrors.appointmentDateTime = "Appointment date & time is required";
-        } else if (new Date(formData.appointmentDateTime) <= new Date()) {
-            newErrors.appointmentDateTime = "Appointment date must be in the future";
+        if (!formData.appointmentDate) {
+            newErrors.appointmentDate = "Appointment date is required";
+        }
+        if (!formData.timeSlot) {
+            newErrors.timeSlot = "Time slot is required";
         }
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
 
     const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
-    };
-
-    const handleSubmit = async (e) => {
-        console.log(formData);
-        
-        e.preventDefault();
-        if (validate()) {
-            try {
-                const response = await axiosInstance.post("my/appointments/create", formData);
-                setFormData(appointmentObj);
-                toast.success("Appointment booked successfully!");
-                // setAddSection(false);
-            } catch (error) {
-                console.error("There was an error booking the appointment:", error);
+        const { name, value } = e.target;
+        setFormData({ ...formData, [name]: value });
+    
+        // Fetch available slots when doctor or date changes
+        if (name === "preferredDoctor" || name === "appointmentDate") {
+            const doctor = name === "preferredDoctor" ? value : formData.preferredDoctor;
+            const date = name === "appointmentDate" ? value : formData.appointmentDate;
+    
+            // Only fetch slots if both doctor and date are selected
+            if (doctor && date) {
+                fetchAvailableSlots(doctor, date);
             }
         }
     };
 
-    const formatDateTimeForInput = (date) => {
-        if (!date) return ''; // Ensure null or undefined don't break the format
-    
-        const d = new Date(date);
-        const pad = (num) => (num < 10 ? '0' + num : num);
-        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-      };
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (validate()) {
+            try {
+                const appointmentData = {
+                    ...formData,
+                    userId: authUser._id, // Add userId from authUser
+                };
+                console.log("Submitting form data:", appointmentData); // Debugging
+                const response = await axiosInstance.post("/appointments/create", appointmentData);
+                setFormData(appointmentObj);
+                toast.success("Appointment booked successfully!");
+            } catch (error) {
+                console.error("There was an error booking the appointment:", error);
+                toast.error("Failed to book the appointment. Please try again.");
+            }
+        }
+    };
 
     return (
         <div className="container mx-auto p-4">
             <div className="bg-white p-6 rounded-lg shadow-md max-w-xl mx-auto">
-                    <img src="../public/images/doctor-default.gif" className="mx-auto mb-3" alt="" />
-                    <h2 className="text-xl font-bold mb-4 text-center">Doctor Appointment</h2>
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        {[
-                            { label: "Full Name", name: "fullName", type: "text", placeholder: "Enter your full name" },
-                            { label: "Date of Birth", name: "dateOfBirth", type: "date" },
-                            { label: "Contact Number", name: "contactNumber", type: "text", placeholder: "Enter a 10-digit number" },
-                            { label: "Email", name: "email", type: "email", placeholder: "Enter your email" },
-                            { label: "Preferred Doctor", name: "preferredDoctor", type: "text", placeholder: "Doctor's name" },
-                            { label: "Appointment Date & Time", name: "appointmentDateTime", type: "datetime-local" }
-                        ].map(({ label, name, type, placeholder }) => (
-                            <div key={name}>
-                                <label className="block text-sm font-medium text-gray-700">{label}</label>
-                                <input 
-                                    type={type} 
-                                    name={name} 
-                                    value={name== 'appointmentDateTime'? formatDateTimeForInput(formData.appointmentDateTime) : formData[name]} 
-                                    onChange={handleChange} 
-                                    placeholder={placeholder}
-                                    className="w-full mt-1 p-2 border rounded-lg focus:ring focus:ring-blue-300"
-                                />
-                                {errors[name] && <span className="text-red-500 text-sm">{errors[name]}</span>}
-                            </div>
-                        ))}
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Gender</label>
-                            <select name="gender" value={formData.gender} onChange={handleChange} 
-                                className="w-full mt-1 p-2 border rounded-lg focus:ring focus:ring-blue-300">
-                                <option value="Male">Male</option>
-                                <option value="Female">Female</option>
-                                <option value="Other">Other</option>
-                            </select>
+                <h2 className="text-xl font-bold mb-4 text-center">Doctor Appointment</h2>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    {[{ label: "Full Name", name: "fullName", type: "text", placeholder: "Enter your full name" },
+                      { label: "Date of Birth", name: "dateOfBirth", type: "date" },
+                      { label: "Contact Number", name: "contactNumber", type: "text", placeholder: "Enter a 10-digit number" },
+                      { label: "Email", name: "email", type: "email", placeholder: "Enter your email" }]
+                      .map(({ label, name, type, placeholder }) => (
+                        <div key={name}>
+                            <label className="block text-sm font-medium text-gray-700">{label}</label>
+                            <input
+                                type={type}
+                                name={name}
+                                value={formData[name]}
+                                onChange={handleChange}
+                                placeholder={placeholder}
+                                className="w-full mt-1 p-2 border rounded-lg focus:ring focus:ring-blue-300"
+                            />
+                            {errors[name] && <span className="text-red-500 text-sm">{errors[name]}</span>}
                         </div>
+                    ))}
 
-                        <button type="submit" className="w-full bg-green-500 text-white px-4 py-2 rounded-lg">
-                            Book Appointment
-                        </button>
-                    </form>
-                </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Preferred Doctor</label>
+                        <select
+                            name="preferredDoctor"
+                            value={formData.preferredDoctor}
+                            onChange={handleChange}
+                            className="w-full mt-1 p-2 border rounded-lg focus:ring focus:ring-blue-300"
+                        >
+                            <option value="">Select a doctor</option>
+                            {doctors.map((doctor) => (
+                                <option key={doctor._id} value={doctor.fullName}>
+                                    {doctor.fullName} - {doctor.specialization}
+                                </option>
+                            ))}
+                        </select>
+                        {errors.preferredDoctor && <span className="text-red-500 text-sm">{errors.preferredDoctor}</span>}
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Appointment Date</label>
+                        <input
+                            type="date"
+                            name="appointmentDate"
+                            value={formData.appointmentDate}
+                            onChange={handleChange}
+                            min={new Date().toISOString().split("T")[0]} // Restrict to future dates
+                            className="w-full mt-1 p-2 border rounded-lg focus:ring focus:ring-blue-300"
+                        />
+                        {errors.appointmentDate && <span className="text-red-500 text-sm">{errors.appointmentDate}</span>}
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Available Time Slot</label>
+                        <select
+                            name="timeSlot"
+                            value={formData.timeSlot}
+                            onChange={handleChange}
+                            className="w-full mt-1 p-2 border rounded-lg focus:ring focus:ring-blue-300"
+                        >
+                            <option value="">Select a time slot</option>
+                            {availableSlots.map((slot, index) => (
+                                <option key={index} value={slot}>
+                                    {slot}
+                                </option>
+                            ))}
+                        </select>
+                        {errors.timeSlot && <span className="text-red-500 text-sm">{errors.timeSlot}</span>}
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Gender</label>
+                        <select name="gender" value={formData.gender} onChange={handleChange} 
+                               className="w-full mt-1 p-2 border rounded-lg focus:ring focus:ring-blue-300">
+                               <option value="Male">Male</option>
+                               <option value="Female">Female</option>
+                               <option value="Other">Other</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" className="w-full bg-green-500 text-white px-4 py-2 rounded-lg">
+                        Book Appointment
+                    </button>
+                </form>
+            </div>
         </div>
     );
 }
