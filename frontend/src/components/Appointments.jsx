@@ -127,11 +127,14 @@ export default function Appointments() {
                                 className="w-full mt-1 p-2 border rounded-lg focus:ring focus:ring-blue-300"
                             >
                                 <option value="">Select a doctor</option>
-                                {doctors.map((doctor) => (
+                                {/* {doctors.map((doctor) => (
                                     <option key={doctor._id} value={doctor.name}>
                                         {doctor.name} - {doctor.specialization}
                                     </option>
-                                ))}
+                                ))} */}
+                                 <option value="doc1">Eshani Nanayakkaara</option>
+                                 <option value="doc2">Gamini Gunathilaka</option>
+                                 <option value="doc3">Rathna Pradeepa</option>
                             </select>
                             {errors.preferredDoctor && <span className="text-red-500 text-sm">{errors.preferredDoctor}</span>}
                         </div>
