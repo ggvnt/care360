@@ -5,13 +5,15 @@ import {
     createAppointment,
     updateAppointment,
     deleteAppointment,
-    getDoctors
+    getDoctors,
+    getAvailableSlots
 } from "../contrallers/user.appoinment.controllers.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
 router.get("/get-doctors", getDoctors);
+router.post("/get-available-slots", getAvailableSlots);
 router.get("/", getAllAppointments);
 router.get("/:id", getAppointment);
 router.post("/create", protectRoute, createAppointment);
