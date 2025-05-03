@@ -67,7 +67,7 @@ const DoctorDetails = () => {
                 className="w-full h-full object-cover"
               />
             </div>
-            <h2 className="text-xl font-bold text-blue-800 text-center">{doctor.name}</h2>
+            <h2 className="text-xl font-bold text-blue-800 text-center">{doctor.fullName}</h2>
             <p className="text-blue-600 font-medium text-center mb-4">{doctor.specialization}</p>
             
             <div className="w-full bg-white rounded-lg shadow-sm p-4 mt-4">
