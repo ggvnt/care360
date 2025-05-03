@@ -21,7 +21,7 @@ import AdminPage from "./pages/admins/AdminPage.jsx";
 import SymptomsPage from "./pages/admins/SymptomsPage.jsx";
 
 //vishmitha
-import SymptomCheckerPage from "./pages/vishmitha/SymptomCheckerPage.jsx";
+// import SymptomCheckerPage from "./pages/vishmitha/SymptomCheckerPage.jsx";
 import ProfilePage from "./pages/auth/ProfilePage.jsx";
 
 //durangi
@@ -31,6 +31,8 @@ import DoctorDetails from "./pages/DoctorDetails.jsx"
 import DoctorList from "./pages/DoctorList.jsx"
 import EditDoctor from "./pages/EditDoctor.jsx"
 import ReviewAppointments from "./pages/admins/ReviewAppointments.jsx";
+import SymptomChecker from "./pages/vishmitha/SymptomChecker.jsx";
+import DiagnosisDetail from "./pages/vishmitha/DiagnosisDetail.jsx";
 import Appointments from "./pages/appointments/Appointments.jsx";
 import MyBookings from "./pages/appointments/MyBookings.jsx";
 
@@ -74,7 +76,8 @@ const App = () => {
           />
 
           {/*vishmitha*/}
-          <Route path="/symptomChecker" element={<SymptomCheckerPage />} />
+          <Route path="/symptomChecker" element={<SymptomChecker />} />
+          <Route path="/diagnosis/:id" element={<DiagnosisDetail />} />
 
           {/*durangi*/}
           <Route path="/add-doctor" element={<AddDoctor />} />
